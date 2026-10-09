@@ -323,7 +323,7 @@ html.big{zoom:1.15}
       </div>
       <div class="pre">Окончание можно не заполнять: запишите поездку перед выездом и допишите время после.</div>
       <div class="two keep">
-        <label>Серия электровоза<input class="inp" id="tLoco" autocomplete="off" maxlength="30" placeholder="например, 2ЭС5К"></label>
+        <label>Серия электровоза<select class="inp" id="tLoco"><option value="">не выбрана</option><option>ВЛ10У</option><option>ВЛ15</option><option>2ЭС4К</option><option>3ЭС4К</option><option>2ЭС6</option></select></label>
         <label>Номер поезда<input class="inp" id="tTrain" autocomplete="off" maxlength="12" inputmode="numeric" placeholder="например, 2345"></label>
       </div>
       <div class="two keep">
@@ -594,6 +594,8 @@ function addShift() {
 function editShift(id) {   // поездка переносится в форму; 0 - очистить форму
   const x = HRS.shifts.find(t => t.id === id), set = (el, v) => $(el).value = v || '';
   EDIT = x ? id : 0;
+  // серия, записанная раньше и не входящая в список, при изменении поездки не теряется
+  if (x && x.loco && ![...$('tLoco').options].some(o => o.value === x.loco)) $('tLoco').add(new Option(x.loco, x.loco));
   set('sStart', x && x.start); set('sEnd', x && x.end); set('tLoco', x && x.loco); set('tTrain', x && x.train); set('tW', x && x.weight); set('tAx', x && x.axles);
   if (restOn !== !!(x && x.rest_start)) toggleRest();
   set('rStart', x && x.rest_start); set('rEnd', x && x.rest_end);
