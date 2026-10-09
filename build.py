@@ -244,7 +244,8 @@ def build():
     shutil.rmtree(OUT, ignore_errors=True)
     for d in ("data/i", "data/t", "files"):
         (OUT / d).mkdir(parents=True)
-    shutil.copyfile(WEB / "index.html", OUT / "index.html")
+    version = f"{int(time.time()):x}"
+    (OUT / "index.html").write_text((WEB / "index.html").read_text("utf-8").replace("__BUILD__", version), "utf-8")
     for path, d in zip(files, docs):
         shutil.copyfile(path, OUT / "files" / d["file"])
     groups = defaultdict(dict)
@@ -256,7 +257,7 @@ def build():
         dump(OUT / f"data/t/{k // PER_FILE}.json", chunks[k:k + PER_FILE])
     # словарь для опечаток: основа -> в скольких фрагментах встречается
     dump(OUT / "data/vocab.json", {t: c for t, c in df.items() if len(t) >= 4 and not t.isdigit()})
-    dump(OUT / "data/meta.json", {"v": f"{int(time.time()):x}", "built": time.strftime("%d.%m.%Y"), "docs": docs, "chunks": n,
+    dump(OUT / "data/meta.json", {"v": version, "built": time.strftime("%d.%m.%Y"), "docs": docs, "chunks": n,
                                   "shards": shards, "per": PER_FILE, "stop": sorted(STOP)})
     print(f"Готово: документов {len(docs)}, фрагментов {n}, слов в индексе {len(post)}, файлов индекса {shards} -> {OUT.name}/")
 

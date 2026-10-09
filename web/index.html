@@ -712,6 +712,7 @@ function fnv(s) {   // номер файла индекса по слову
 // </stem>
 
 // ---- поиск по документам: индекс собран заранее (build.py), всё считается в браузере
+const BUILD = '__BUILD__';   // номер сборки, подставляет build.py
 let META = null, RUN = 0, HITS = [], SHOWN = 0, MARKS = new Set();
 const FILES = {}, ROWS = {};
 function data(path) {   // файл индекса: скачивается один раз
@@ -838,6 +839,12 @@ function renderDocs() {
   loadHours(); vacRender();
   try { META = await (await fetch('data/meta.json', {cache: 'no-cache'})).json(); }
   catch (e) { $('homeSub').textContent = 'Список документов не загрузился. Обновите страницу.'; return; }
+  // браузер до 10 минут держит старую копию страницы: если сайт пересобран - один раз перечитываем её заново
+  let seen = '';
+  try { seen = sessionStorage.getItem('reloaded'); } catch (e) {}
+  if (META.v !== BUILD && seen !== META.v) {
+    try { sessionStorage.setItem('reloaded', META.v); await fetch(location.pathname, {cache: 'reload'}); location.reload(); return; } catch (e) {}
+  }
   STOP = new Set(META.stop);
   META.docs.forEach(d => d.stems = new Set(tokens(d.name)));
   const n = META.docs.length;
