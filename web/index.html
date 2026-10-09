@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0f13">
+<meta name="description" content="Поиск по нормативным документам железнодорожника и расчёты: отдых бригады, справка ВУ-45, учёт часов.">
+<title>РЖД Ассистент - документы и расчёты</title>
+<style>
+:root{
+  --bg:#0d0f13; --card:#181b21; --card2:#1f232b; --line:#2a2f37; --text:#f3f5f8; --muted:#8b949e;
+  --red:#ff5252; --brand:#e21a1a; --blue:#4da3ff; --amber:#ffc13b; --violet:#a78bfa; --green:#34d399; --cyan:#2dd4dc;
+  --r:20px; --pad:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,-apple-system,"SF Pro Text",Roboto,sans-serif;font-size:15px;line-height:1.45}
+body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+svg{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.wrap{max-width:720px;margin:0 auto;padding:0 var(--pad)}
+.stripe{height:4px;background:var(--brand)}
+
+/* шапка */
+header{position:sticky;top:0;z-index:20;background:rgba(13,15,19,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:12px;height:60px}
+.logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:22px;color:var(--red);
+  background:rgba(255,82,82,.16);border:1px solid rgba(255,82,82,.4)}
+.brand{font-weight:800;font-size:17px;letter-spacing:-.01em;line-height:1.1}
+.brand{min-width:0;flex:0 1 auto;overflow:hidden}
+.brand small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:0}
+
+/* общие блоки */
+.view{display:none;padding-top:18px;animation:in .25s ease}
+.view.on{display:block}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+h1{font-size:26px;line-height:1.15;font-weight:800;letter-spacing:-.02em;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 16px}
+h2{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:26px 0 10px;display:flex;align-items:center}
+h2 a{margin-left:auto;color:var(--text);text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;opacity:.85}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+
+.field{display:flex;gap:8px;align-items:flex-end;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px 6px 6px 14px}
+.field:focus-within{border-color:rgba(255,82,82,.6)}
+textarea::placeholder,input::placeholder{color:#5f6772}
+.send{width:44px;height:44px;border-radius:12px;background:var(--brand);color:#fff;font-size:20px;display:grid;place-items:center}
+.send:disabled{opacity:.45}
+
+/* плитки */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{position:relative;text-align:left;padding:16px;min-height:128px;display:flex;flex-direction:column;overflow:hidden}
+.tile:active{transform:scale(.98)}
+.badge{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:24px;color:var(--c);
+  background:color-mix(in srgb,var(--c) 16%,transparent);border:1px solid color-mix(in srgb,var(--c) 42%,transparent)}
+.tile b{margin-top:auto;padding-top:14px;font-size:17px;font-weight:800;letter-spacing:-.01em}
+.tile small{color:var(--muted);font-size:12.5px;min-height:2.9em}
+.tile .dot{position:absolute;right:16px;top:18px;width:8px;height:8px;border-radius:50%;background:var(--c)}
+.soon{position:absolute;right:12px;top:12px;font-size:11px;font-weight:700;padding:4px 8px;border-radius:999px;color:var(--muted);border:1px solid var(--line)}
+
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px}
+.seg button{padding:10px;border-radius:10px;font-weight:700;color:var(--muted)}
+.seg button.on{background:var(--card2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+/* учёт часов */
+.mon{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.mon b{font-size:18px;font-weight:800}
+.mon button{width:42px;height:42px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:18px;display:grid;place-items:center}
+.sum{padding:16px}
+.sum .big{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums}
+.sum .big small{display:block;margin-top:6px;font-size:15px;font-weight:600;color:var(--muted);letter-spacing:0}
+.prog{height:8px;border-radius:8px;background:var(--card2);margin:14px 0 12px;overflow:hidden}
+.prog i{display:block;height:100%;border-radius:8px;background:var(--green)}
+.prog.over i{background:var(--amber)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats div{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:10px;min-width:0}
+.stats small{display:block;color:var(--muted);font-size:11.5px}
+.stats b{font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.normf{display:flex;align-items:center;gap:8px;white-space:nowrap;margin-top:12px;font-size:13px;color:var(--muted)}
+.normf input{width:74px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:7px 10px;outline:0;color:var(--text);font-weight:700}
+.normf button{padding:7px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-weight:700;color:var(--text)}
+.next{display:flex;gap:12px;align-items:center;padding:14px 16px;margin-top:12px}
+.next b{display:block;font-size:17px}
+.next small{color:var(--muted);font-size:12.5px}
+.form{padding:16px;display:grid;gap:12px}
+.form label{display:grid;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.form input[type=datetime-local],.form input[type=time]{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;outline:0;
+  color:var(--text);font-weight:600;color-scheme:dark;-webkit-appearance:none;min-height:46px}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form label{min-width:0}
+@media(max-width:460px){.form .two:not(.keep){grid-template-columns:1fr}}
+.form .tog .sw{margin-left:0}
+.form .tog{display:flex;align-items:center;justify-content:flex-start;gap:10px;font-size:14px;font-weight:600;color:var(--text);width:100%;text-align:left}
+.form .pre{font-size:13px;color:var(--muted)}
+.form .pre b{color:var(--text)}
+.form .err{color:var(--red);font-size:13px;font-weight:600}
+.btn{height:48px;border-radius:14px;background:var(--brand);color:#fff;font-weight:800}
+.btn:disabled{opacity:.5}
+.trip{padding:14px 16px;border-top:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
+.trip:first-child{border-top:0}
+.trip>div{min-width:0;flex:1}
+.trip .when{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.trip b{display:block;font-size:17px;margin:2px 0}
+.trip small{display:block;color:var(--muted);font-size:12.5px}
+.trip .w{color:var(--amber);font-weight:600}
+.trip .x{width:36px;height:36px;border-radius:12px;color:var(--muted);border:1px solid var(--line);font-size:16px;display:grid;place-items:center}
+.note{color:var(--muted);font-size:12px;margin:12px 2px 0}
+
+/* справка ВУ-45 */
+.form .inp{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;outline:0;
+  color:var(--text);font-weight:600;min-height:46px;-webkit-appearance:none;appearance:none}
+.form select.inp{color-scheme:dark}
+.form .inp:focus{border-color:rgba(255,82,82,.6)}
+.vrow{display:grid;grid-template-columns:1fr 84px 78px;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.vrow:first-child{border-top:0}
+.vrow.head{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--card2)}
+.vrow b{font-size:17px}
+.vrow small{display:block;color:var(--muted);font-size:12px;line-height:1.3}
+.vrow input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px;outline:0;text-align:center;font-weight:700}
+.vrow input:focus{border-color:rgba(255,82,82,.6)}
+.vrow .r{text-align:right;font-weight:700}
+.vrow.tot{background:var(--card2)}
+.vmore{display:block;width:100%;padding:13px 16px;border-top:1px solid var(--line);font-weight:700;font-size:13px;color:var(--muted);text-align:center}
+.verd{margin-top:12px;font-size:13.5px;font-weight:600}
+.verd.ok{color:var(--green)}.verd.warn{color:var(--amber)}.verd.bad{color:var(--red)}
+.prog.bad i{background:var(--red)}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:12px 16px;border-top:1px solid var(--line)}
+.kv:first-child{border-top:0}
+.kv span{color:var(--muted);font-size:13.5px}
+.kv b{white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* профиль */
+.list{overflow:hidden}
+.item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line);width:100%;text-align:left}
+.item:first-child{border-top:0}
+.item .badge{width:38px;height:38px;border-radius:12px;font-size:19px}
+.item>span:nth-child(2){min-width:0}
+.item b{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item small{color:var(--muted);font-size:12.5px}
+.item .go{margin-left:auto;color:var(--muted)}
+.sw{margin-left:auto;width:46px;height:28px;border-radius:999px;background:var(--line);position:relative;transition:.2s;flex:none}
+.sw:after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+.sw.on{background:var(--green)}.sw.on:after{left:21px}
+
+/* нижнее меню, шторка, скелетон */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(13,15,19,.9);backdrop-filter:blur(16px);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)}
+nav .wrap{display:grid;grid-template-columns:repeat(4,1fr);height:64px;padding:0 6px}
+nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted)}
+nav button svg{font-size:23px}
+nav button.on{color:var(--text)}nav button.on svg{color:var(--red)}
+.sk{border-radius:12px;background:linear-gradient(90deg,var(--card2) 25%,#2a2f38 37%,var(--card2) 63%);background-size:400% 100%;animation:sk 1.2s infinite}
+@keyframes sk{from{background-position:100% 0}to{background-position:0 0}}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+/* поиск и документы */
+.field{align-items:center}
+.field input{flex:1;min-width:0;height:44px;background:none;border:0;outline:0;-webkit-appearance:none;appearance:none}
+.field input::-webkit-search-cancel-button{display:none}
+.found{margin-top:14px}
+.count{display:flex;gap:12px;align-items:baseline;color:var(--muted);font-size:13px;margin:0 2px 10px}
+.count a{margin-left:auto;flex:none;color:var(--text);font-weight:600;cursor:pointer}
+.hit{padding:14px 16px;margin-bottom:10px}
+.hit .src{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:8px}
+.hit .src span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hit .src svg{color:var(--cyan);font-size:16px}
+.hit .at{display:flex;gap:10px;align-items:baseline;margin-top:10px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.hit .at span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hit .at a{margin-left:auto;flex:none;color:var(--blue);text-decoration:none}
+.hit .tx{word-wrap:break-word}
+.hit .tx.cut{cursor:pointer}
+.hit mark{background:rgba(255,193,59,.18);color:var(--amber);padding:0 3px;border-radius:5px;font-weight:700}
+.morebtn{display:block;width:100%;padding:13px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-weight:700;color:var(--muted)}
+a.item{color:inherit;text-decoration:none}
+</style>
+</head>
+<body>
+<svg style="display:none">
+  <symbol id="i-train" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="14.5" rx="3.5"/><path d="M5 9.5h14M8 17l-2.5 4.5M16 17l2.5 4.5M2.5 21.5h19"/><circle cx="9" cy="13.4" r=".6" fill="currentColor"/><circle cx="15" cy="13.4" r=".6" fill="currentColor"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19"/><ellipse cx="12" cy="12" rx="4.4" ry="9.5"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5a4 4 0 0 1-.5-7.97A6 6 0 0 1 18 11.5a3.5 3.5 0 0 1-.5 7z"/></symbol>
+  <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7 15.5a4 4 0 0 1-.5-7.97A6 6 0 0 1 18 8.5a3.5 3.5 0 0 1-.5 7zM8.5 18.5l-1 2.5M12.5 18.5l-1 2.5M16.5 18.5l-1 2.5"/></symbol>
+  <symbol id="i-snow" viewBox="0 0 24 24"><path d="M7 14.5a4 4 0 0 1-.5-7.97A6 6 0 0 1 18 7.5a3.5 3.5 0 0 1-.5 7zM8 18.5h.01M12 18.5h.01M16 18.5h.01M10 21.5h.01M14 21.5h.01"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2.5H6.5A1.5 1.5 0 0 0 5 4v16a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 20V7.5zM14 2.5v5h5M8.5 13h7M8.5 17h5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11 12 3.5l8.5 7.5V20a1.5 1.5 0 0 1-1.5 1.5h-4.5v-6h-5v6H5A1.5 1.5 0 0 1 3.5 20z"/></symbol>
+  <symbol id="i-news" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M7.5 9h5M7.5 12.5h9M7.5 16h9"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m5 9 7 7 7-7"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m4.5 12.5 5 5 10-11"/></symbol>
+  <symbol id="i-q" viewBox="0 0 24 24"><path d="M4 5.5h16v11H9.5L5 20.5v-4H4z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 21h4"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21.5s7-6.2 7-11.5a7 7 0 0 0-14 0c0 5.300 7 11.500 7 11.500z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01M8.5 19h.01M12 19h.01M15.5 19h.01"/></symbol>
+  <symbol id="i-brake" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><path d="M4 5.5a10 10 0 0 0 0 13M20 5.5a10 10 0 0 1 0 13M12 9v3.5M12 15h.01"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></symbol>
+</svg>
+
+<div class="stripe"></div>
+<header><div class="wrap bar">
+  <div class="logo"><svg><use href="#i-train"/></svg></div>
+  <div class="brand">РЖД Ассистент<small>неофициальный справочник железнодорожника</small></div>
+</div></header>
+
+<main class="wrap">
+  <!-- Главная: поиск по документам -->
+  <section class="view on" id="v-home">
+    <h1>Нормативка под рукой</h1>
+    <p class="sub" id="homeSub">Поиск по словам в документах и расчёты для смены.</p>
+    <form class="field" onsubmit="event.preventDefault();find($('q').value)">
+      <input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="Слова для поиска: автоблокировка неисправность" aria-label="Поиск по документам">
+      <button class="send" aria-label="Найти"><svg><use href="#i-search"/></svg></button>
+    </form>
+    <div class="found" id="found"></div>
+
+    <div id="sections">
+      <h2>Разделы</h2>
+      <div class="tiles">
+        <button class="card tile" style="--c:var(--green)" onclick="go('hours')"><span class="badge"><svg><use href="#i-clock"/></svg></span><i class="dot"></i><b>Учёт часов</b><small id="tileHours">поездки, отдых, итог за месяц</small></button>
+        <button class="card tile" style="--c:var(--cyan)" onclick="go('calc','rest')"><span class="badge"><svg><use href="#i-calc"/></svg></span><i class="dot"></i><b>Бригадник</b><small>отдых в пункте оборота и время подъёма</small></button>
+        <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><i class="dot"></i><b>Справка ВУ-45</b><small>нажатие колодок и ручные тормоза</small></button>
+        <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><i class="dot"></i><b>Документы</b><small id="tileDocs">все файлы целиком</small></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Учёт часов -->
+  <section class="view" id="v-hours">
+    <h1>Учёт часов</h1><p class="sub">Записывайте поездки - посчитаю отдых и итог за месяц.</p>
+    <div class="mon"><button onclick="shiftMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
+      <b id="monName"></b><button onclick="shiftMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
+    <div id="hoursSum"></div>
+
+    <h2>Добавить поездку</h2>
+    <form class="card form" onsubmit="event.preventDefault();addShift()">
+      <div class="two">
+        <label>Явка<input type="datetime-local" id="sStart" oninput="preview()"></label>
+        <label>Окончание работы<input type="datetime-local" id="sEnd" oninput="preview()"></label>
+      </div>
+      <button type="button" class="tog" onclick="toggleRest()"><span class="sw" id="restSw"></span>Был отдых в пункте оборота</button>
+      <div class="two" id="restBox" style="display:none">
+        <label>Начало отдыха<input type="datetime-local" id="rStart" oninput="preview()"></label>
+        <label>Конец отдыха<input type="datetime-local" id="rEnd" oninput="preview()"></label>
+      </div>
+      <div class="pre" id="sPre"></div>
+      <div class="err" id="sErr"></div>
+      <button class="btn" id="sBtn">Записать поездку</button>
+    </form>
+
+    <h2>Поездки за месяц</h2>
+    <div id="trips"></div>
+    <p class="note">Поездки хранятся только в этом браузере на этом устройстве. Расчёт по приказу Минтранса № 339: отдых дома = рабочее время × 2,6 − отдых в пункте оборота, не меньше 16 часов. Ночные часы - с 22:00 до 06:00. В вашем депо могут действовать свои нормы - сверяйте с маршрутом и табелем.</p>
+  </section>
+
+  <!-- Калькулятор: отдых в бригаднике, справка ВУ-45 -->
+  <section class="view" id="v-calc">
+    <h1>Калькулятор</h1><p class="sub" id="calcSub"></p>
+    <div class="seg"><button id="cm-rest" onclick="calcMode('rest')">Бригадник</button><button id="cm-vu" onclick="calcMode('vu')">ВУ-45</button></div>
+
+    <div id="c-rest">
+      <div class="card form">
+        <div class="two keep">
+          <label>Явка на работу<input type="time" id="crA" oninput="crSet('a',this.value)"></label>
+          <label>Окончание работы<input type="time" id="crB" oninput="crSet('b',this.value)"></label>
+        </div>
+        <label>Начало отдыха в бригаднике<input type="time" id="crR" oninput="crSet('r',this.value)"></label>
+        <div class="pre">Если не заполнять - отдых считается с окончания работы.</div>
+        <div class="two keep">
+          <label>Отдых<select class="inp" id="crPart" onchange="crSet('part',this.value)"><option value="0.5">половина работы</option><option value="1">равен работе</option></select></label>
+          <label>Будят до явки, мин<input class="inp" id="crWake" inputmode="numeric" placeholder="60" oninput="crSet('wake',this.value)"></label>
+        </div>
+      </div>
+      <h2>Итог <a onclick="crClear()">очистить</a></h2>
+      <div id="crOut"></div>
+      <p class="note">По приказу Минтранса № 339 отдых в пункте оборота - не меньше половины отработанного до него времени; половину от нечётного числа минут округляю вверх. В вашем депо могут действовать свои нормы - сверяйте с дежурным по депо и маршрутом.</p>
+    </div>
+
+    <div id="c-vu">
+    <div class="card form">
+      <label>Категория поезда<select class="inp" id="vuCat" onchange="vuSet('cat',this.value,1)"></select></label>
+      <div class="two">
+        <label>Вес состава, тс<input class="inp" id="vuW" inputmode="decimal" placeholder="например, 5200" oninput="vuSet('w',this.value)"></label>
+        <label>Всего осей<input class="inp" id="vuAx" inputmode="numeric" placeholder="например, 280" oninput="vuSet('ax',this.value)"></label>
+      </div>
+      <button type="button" class="tog" onclick="vuSet('loco',!VU.loco,1)"><span class="sw" id="vuLocoSw"></span>Учитывать вес и тормоза локомотива</button>
+      <label id="vuLwBox">Учётный вес локомотива, тс<input class="inp" id="vuLw" inputmode="decimal" placeholder="ЧС2 - 120, ЭП1, ЭП2К - 135, ТЭП70 - 136" oninput="vuSet('lw',this.value)"></label>
+      <div class="pre" id="vuCatNote"></div>
+    </div>
+
+    <h2>Тормозное нажатие <a onclick="vuClear()">очистить</a></h2>
+    <div class="card" id="vuRows" style="overflow:hidden"></div>
+
+    <h2>Итог</h2>
+    <div id="vuOut"></div>
+
+    <div id="vuHandBox">
+      <h2>Ручные тормоза</h2>
+      <div class="card form">
+        <label>Норма на 100 тс веса состава<select class="inp" id="vuSlope" onchange="vuSet('slope',this.value)"></select></label>
+        <label>Наличие ручных тормозных осей<input class="inp" id="vuHand" inputmode="numeric" placeholder="фактически в составе" oninput="vuSet('hand',this.value)"></label>
+        <div class="pre" id="vuHandOut"></div>
+      </div>
+    </div>
+
+    <h2>В бланк</h2>
+    <div class="card" id="vuBlank"></div>
+    <p class="note">Нормы - из «Норм обеспечения поездов тормозами» (приложение 2 к Правилам эксплуатации тормозов, текст с сайта Минтранса): единое наименьшее нажатие - таблица 1, допускаемое минимальное - таблица 2, нажатие на ось - таблицы 3 и 4, ручные тормоза - таблица 8. В грузовых поездах вес и тормоза локомотива не учитываются (п. 6.3). Требуемое нажатие округляю вверх до целой тонны. Сверяйте с действующей редакцией Правил и местными инструкциями вашей дороги.</p>
+    </div>
+  </section>
+
+  <!-- Документы -->
+  <section class="view" id="v-docs">
+    <h1>Документы</h1><p class="sub" id="docsSub">Файлы открываются целиком.</p>
+    <div id="docs"></div>
+    <p class="note">Неофициальный справочник. Сверяйте с действующей редакцией документов и местными инструкциями.</p>
+  </section>
+</main>
+
+<nav><div class="wrap">
+  <button class="on" data-v="home" onclick="go('home')"><svg><use href="#i-search"/></svg>Поиск</button>
+  <button data-v="hours" onclick="go('hours')"><svg><use href="#i-clock"/></svg>Часы</button>
+  <button data-v="calc" onclick="go('calc')"><svg><use href="#i-calc"/></svg>Расчёты</button>
+  <button data-v="docs" onclick="go('docs')"><svg><use href="#i-doc"/></svg>Документы</button>
+</div></nav>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s || '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const ic = n => `<svg><use href="#i-${n}"/></svg>`;
+
+function go(view, arg) {
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
+  window.scrollTo(0, 0);
+  if (view === 'hours') loadHours();
+  if (view === 'calc') calcMode(arg);
+  if (view === 'docs') renderDocs();
+}
+
+// ---- учёт часов
+const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const p2 = n => String(n).padStart(2, '0');
+const hm = m => { m = Math.round(Math.abs(m)); return `${Math.floor(m / 60)} ч ${p2(m % 60)} мин`; };
+const hs = m => { m = Math.round(Math.abs(m)); return `${Math.floor(m / 60)} ч ${p2(m % 60)} м`; };
+const dt = s => `${s.slice(8, 10)}.${s.slice(5, 7)} ${s.slice(11, 16)}`;
+const mins = (a, b) => (new Date(b) - new Date(a)) / 60000;
+let YM = (d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}`)(new Date()), restOn = false;
+
+function shiftMonth(k) {
+  const d = new Date(+YM.slice(0, 4), +YM.slice(5, 7) - 1 + k, 1);
+  YM = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
+  loadHours();
+}
+function loadHours() {
+  $('monName').textContent = `${MONTHS[+YM.slice(5, 7) - 1]} ${YM.slice(0, 4)}`;
+  renderHours(hoursData(YM));
+}
+function renderHours(r) {
+  if (r.error || r.ym !== YM) return;
+  const norm = r.norm * 60, left = norm - r.work, over = left < 0;
+  $('hoursSum').innerHTML =
+    `<div class="card sum"><div class="big">${hm(r.work)} <small>из ${+r.norm} ч нормы</small></div>
+      <div class="prog ${over ? 'over' : ''}"><i style="width:${norm ? Math.min(100, r.work / norm * 100) : 0}%"></i></div>
+      <div class="stats"><div><small>${over ? 'Переработка' : 'До нормы'}</small><b>${hs(left)}</b></div>
+        <div><small>Ночные</small><b>${hs(r.night)}</b></div><div><small>Поездок</small><b>${r.items.length}</b></div></div>
+      <form class="normf" onsubmit="event.preventDefault();setNorm()">Норма, ч<input id="normIn" inputmode="decimal" value="${+r.norm}">
+        <button>Сохранить</button>${r.norm_own ? '<span>своя</span>' : '<span>календарь</span>'}</form></div>` +
+    (r.last ? `<div class="card next"><span class="badge" style="--c:var(--green)">${ic('clock')}</span><span><small>Следующая явка не раньше</small>
+      <b>${dt(r.last.next)}</b><small>отдых дома ${hm(r.last.home)} после поездки ${dt(r.last.start)}</small></span></div>` : '');
+  $('trips').innerHTML = r.items.length ? `<div class="card">` + r.items.map(x =>
+    `<div class="trip"><div><div class="when">${dt(x.start)} → ${dt(x.end)}</div><b>${hm(x.work)}</b>
+      <small>${x.rest ? `отдых в обороте ${hm(x.rest)} · ` : ''}ночных ${hm(x.night)} · дома не меньше ${hm(x.home)}</small>
+      ${x.month_work !== x.work ? `<small>в этом месяце ${hm(x.month_work)}</small>` : ''}
+      ${x.warn.map(w => `<small class="w">${esc(w)}</small>`).join('')}</div>
+      <button class="x" onclick="delShift(${x.id})" aria-label="Удалить поездку">✕</button></div>`).join('') + `</div>`
+    : `<div class="card empty">В этом месяце поездок пока нет.</div>`;
+  if (r.ym === (d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}`)(new Date())) $('tileHours').textContent = `${hm(r.work)} из ${+r.norm} ч`;
+}
+function toggleRest() {
+  restOn = !restOn;
+  $('restSw').classList.toggle('on', restOn); $('restBox').style.display = restOn ? '' : 'none';
+  preview();
+}
+function preview() {
+  const a = $('sStart').value, b = $('sEnd').value, ra = restOn && $('rStart').value, rb = restOn && $('rEnd').value;
+  $('sErr').textContent = '';
+  if (!a || !b || mins(a, b) <= 0 || (restOn && !(ra && rb))) { $('sPre').textContent = ''; return; }
+  const rest = restOn ? Math.max(0, mins(ra, rb)) : 0, work = mins(a, b) - rest;
+  $('sPre').innerHTML = `Рабочее время <b>${hm(work)}</b> · отдых дома не меньше <b>${hm(Math.max(960, Math.round(work * 2.6) - rest))}</b>`;
+}
+function addShift() {
+  const val = id => $(id).value.slice(0, 16);
+  const x = {start: val('sStart'), end: val('sEnd'), rest_start: restOn ? val('rStart') : '', rest_end: restOn ? val('rEnd') : ''};
+  if (!x.start || !x.end || (restOn && !(x.rest_start && x.rest_end))) { $('sErr').textContent = 'Заполните дату и время во всех полях.'; return; }
+  const err = tripError(x);
+  if (err) { $('sErr').textContent = err; return; }
+  HRS.shifts.push(Object.assign(x, {id: ++HRS.seq})); save('hours', HRS);
+  ['sStart', 'sEnd', 'rStart', 'rEnd'].forEach(i => $(i).value = '');
+  if (restOn) toggleRest();
+  $('sPre').textContent = '';
+  YM = x.start.slice(0, 7); loadHours();
+}
+function delShift(id) {
+  if (!confirm('Удалить поездку?')) return;
+  HRS.shifts = HRS.shifts.filter(x => x.id !== id); save('hours', HRS); loadHours();
+}
+function setNorm() {
+  const h = parseFloat($('normIn').value.replace(',', '.'));
+  if (h > 0 && h <= 400) HRS.norms[YM] = h; else delete HRS.norms[YM];   // пусто или не число - возвращаем норму по календарю
+  save('hours', HRS); loadHours();
+}
+
+// ---- калькулятор: режимы
+const CALC_SUB = {rest: 'Сколько отдыхать в пункте оборота и когда поднимут на явку.',
+  vu: 'Посчитаю требуемое и фактическое нажатие колодок и ручные тормоза.'};
+const load = (key, def) => { try { return Object.assign(def, JSON.parse(localStorage.getItem(key) || '{}')); } catch (e) { return def; } };
+const save = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} };
+const clock = v => /^\d\d:\d\d/.test(v || '') ? +v.slice(0, 2) * 60 + +v.slice(3, 5) : null;
+const hhmm = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${p2(Math.floor(m / 60))}:${p2(m % 60)}`; };
+const dayWord = d => d <= 0 ? 'в те же сутки' : d === 1 ? 'на следующие сутки' : `через ${d} сут.`;
+const int = v => Math.max(0, Math.floor(parseFloat(String(v).replace(',', '.')) || 0));
+let CM = load('calcMode', {m: 'rest'}).m;
+if (!CALC_SUB[CM]) CM = 'rest';
+
+function calcMode(m) {
+  if (CALC_SUB[m]) { CM = m; save('calcMode', {m}); }
+  Object.keys(CALC_SUB).forEach(k => { $('cm-' + k).classList.toggle('on', k === CM); $('c-' + k).style.display = k === CM ? '' : 'none'; });
+  $('calcSub').textContent = CALC_SUB[CM];
+  ({rest: crRender, vu: vuRender})[CM]();
+}
+
+// отдых в бригаднике (пункте оборота): время - часы на стене, переход через полночь учитывается сам
+const CR0 = () => ({a: '', b: '', r: '', part: '0.5', wake: '60'});
+let CR = load('calcRest', CR0());
+function crSet(key, value) { CR[key] = value; save('calcRest', CR); crCalc(); }
+function crClear() { CR = Object.assign(CR0(), {part: CR.part, wake: CR.wake}); save('calcRest', CR); crRender(); }
+function crRender() {
+  $('crA').value = CR.a; $('crB').value = CR.b; $('crR').value = CR.r; $('crPart').value = CR.part; $('crWake').value = CR.wake;
+  crCalc();
+}
+function crCalc() {
+  const a = clock(CR.a), b = clock(CR.b), work = a === null || b === null ? 0 : (b - a + 1440) % 1440;
+  if (!work) { $('crOut').innerHTML = `<div class="card empty">Укажите время явки и окончания работы.</div>`; return; }
+  const rest = Math.ceil(work * (+CR.part || .5)), rc = clock(CR.r), from = b + (rc === null ? 0 : (rc - b + 1440) % 1440);
+  const till = from + rest, wake = till - int(CR.wake), day = Math.floor(till / 1440) - Math.floor(from / 1440);
+  $('crOut').innerHTML = `<div class="card sum"><div class="big">${hhmm(till)} <small>явка не раньше, ${dayWord(day)} · отдых с ${hhmm(from)}</small></div>
+    <div class="stats" style="margin-top:14px"><div><small>Отработано</small><b>${hs(work)}</b></div><div><small>Отдых</small><b>${hs(rest)}</b></div>
+      <div><small>Подъём</small><b>${hhmm(wake)}</b></div></div>
+    ${work > 720 ? `<div class="verd warn">Непрерывная работа больше 12 часов - проверьте время.</div>` : ''}
+    ${from - b > work ? `<div class="verd warn">От окончания работы до начала отдыха больше, чем сама работа - проверьте время.</div>` : ''}</div>`;
+}
+
+// ---- справка ВУ-45
+// строки бланка и подсказки, кому какое нажатие на ось (таблицы 3 и 4 Норм)
+const VU_P = [1.25, 3, 3.5, 4.5, 5, 5.5, 6, 6.5, 7, 8, 8.5, 9, 10, 11, 11.5, 12, 12.5, 13, 14, 15, 16, 18, 19, 20, 21];
+const VU_HINT = {1.25: 'хоппер-дозатор ЦНИИ-2, ЦНИИ-3, чугун, порожний', 3: 'хоппер-дозатор ЦНИИ-ДВЗ, порожний', 3.5: 'грузовой вагон, порожний режим',
+  4.5: 'рефрижераторный, композит, порожний', 5: 'грузовой, чугун, средний режим', 5.5: 'ТЭМ7, порожний режим',
+  6: 'рефрижераторный, чугун, средний · изотермический, багажный', 6.5: 'остальные вагоны пассажирского парка',
+  7: 'грузовой: чугун гружёный · композит средний', 8: 'пассажирский, тара 42-48 тс', 8.5: 'грузовой, композит, гружёный режим',
+  9: 'пассажирский, тара 48-53 тс · рефрижераторный, чугун, гружёный', 10: 'пассажирский, тара 53 тс и более',
+  11: 'ВЛ60, ВЛ23, ЧМЭ3, ТЭМ2', 11.5: 'ТЭП10, ТЭ7', 12: '2ТЭ116, 2ТЭ10, 2М62 · ЧС на пассажирском режиме',
+  13: 'ЭП2К на пассажирском режиме · ТЭМ7', 14: 'ВЛ80, ВЛ10, ВЛ11, ВЛ85, 2ЭС5К, 3ЭС5К, 2ЭС6 · ЭП1, ТЭП70 на пассажирском',
+  15: 'вагон РИЦ с тормозом КЕ, чугун, скоростной режим', 16: 'ЧС2, ЧС4, ЧС7, ЧС8 на скоростном режиме · ЭП10',
+  18: 'ЭП1, ЭП2К на скоростном режиме', 19: 'ТЭП70БС на скоростном режиме', 21: 'вагоны с дисковым тормозом и включённым МРТ'};
+// norm - таблица 1, min и v - таблица 2; k - км/ч за недостающую тонну (п. 4.4): 2 или [спуск до 0,006; круче]
+const VU_CAT = [
+  {id: 'gr', name: 'Грузовой гружёный, рефрижераторный, хозяйственный', norm: 33, min: 28, v: 80, k: 2, rows: [3.5, 5, 7, 8.5],
+   note: 'До 80 км/ч; до 90 км/ч - при зелёном огне АЛСН на трёхзначной автоблокировке и спуске не круче 0,010 (п. 3.1).'},
+  {id: 'p350', name: 'Грузовой порожний до 350 осей', norm: 55, min: 50, v: 100, k: 2, rows: [3.5], note: 'Скорость более 90 до 100 км/ч.'},
+  {id: 'p400', name: 'Грузовой порожний от 350 до 400 осей', norm: 44, k: 2, rows: [3.5]},
+  {id: 'p520', name: 'Грузовой порожний более 400 до 520 осей', norm: 33, k: 2, rows: [3.5]},
+  {id: 'ref100', name: 'Рефрижераторный, более 90 до 100 км/ч', norm: 55, min: 50, v: 100, k: [1, 2], rows: [4.5, 7]},
+  {id: 'ref120', name: 'Рефрижераторный, более 100 до 120 км/ч', norm: 60, min: 50, v: 120, k: [1, 2], rows: [4.5, 7],
+   note: 'Вагоны по специальным техусловиям: композит на среднем режиме - 14 тс, на порожнем - 8,5 тс на ось.'},
+  {id: 'gp', name: 'Грузопассажирский, до 90 км/ч', norm: 44, min: 38, v: 90, k: [1, 2], loco: 1, rows: [3.5, 5, 7, 8.5, 9, 10, 14]},
+  {id: 'pas120', name: 'Пассажирский, до 120 км/ч', norm: 60, min: 45, v: 120, k: [1, 2], loco: 1, pas: 1, rows: [6.5, 8, 9, 10, 12, 14],
+   note: 'Если все тормоза включены и исправны, 60 тс на 100 тс принимают без подсчёта: таблицу не заполняют, в строке «Всего» пишут потребное нажатие (п. 6.4).'},
+  {id: 'pas130', name: 'Пассажирский, более 120 до 130 км/ч', norm: 68, min: 60, v: 130, k: [1, 2], loco: 1, pas: 1, rows: [8, 9, 10, 16, 18],
+   note: 'Электропневматический тормоз, композиционные колодки: нажатие вагонов на 25 % больше, чем для чугунных (п. 6.2).'},
+  {id: 'pas140', name: 'Пассажирский, более 130 до 140 км/ч', norm: 78, min: 68, v: 140, k: [1, 2], loco: 1, pas: 1, rows: [8, 9, 10, 16, 18],
+   note: 'Электропневматический тормоз, композиционные колодки: нажатие вагонов на 25 % больше, чем для чугунных (п. 6.2).'},
+  {id: 'pas160', name: 'Пассажирский, более 140 до 160 км/ч', norm: 80, min: 70, v: 160, k: [1, 2], loco: 1, pas: 1, rows: [8, 9, 10, 16, 18],
+   note: 'Электропневматический тормоз, композиционные колодки: нажатие вагонов на 30 % больше, чем для чугунных (п. 6.2).'}];
+// таблица 8: уклон, башмаков на 100 тс при нагрузке на ось от 10 тс, башмаков при меньшей нагрузке, ручных тормозных осей
+const VU_HAND = [[0, .2, .4, .4], [.002, .2, .4, .4], [.004, .2, .4, .4], [.006, .2, .4, .4], [.008, .2, .6, .6], [.01, .3, .8, .8], [.012, .4, 1, 1],
+  [.014, .4, 1.2, 1.2], [.016, .5, 1.4, 1.4], [.018, .6, 1.6, 1.6], [.02, .6, 1.8, 1.8], [.022, .7, 2, 0], [.024, .8, 2.2, 0], [.026, .8, 2.4, 0],
+  [.028, .9, 2.6, 0], [.03, 1, 2.8, 0], [.032, 1, 3, 0], [.034, 1.1, 3.2, 0], [.036, 1.2, 3.4, 0], [.038, 1.2, 3.6, 0], [.04, 1.3, 3.8, 0]];
+let VU = {cat: 'gr', w: '', ax: '', loco: false, lw: '', n: {}, all: false, slope: 'u', hand: ''};
+try { VU = Object.assign(VU, JSON.parse(localStorage.getItem('vu45') || '{}')); } catch (e) {}
+const num = v => { const x = parseFloat(String(v).replace(',', '.').replace(/\s/g, '')); return x > 0 ? x : 0; };
+const ru = (x, d = 1) => (Math.round(x * 100) / 100).toLocaleString('ru-RU', {maximumFractionDigits: d});
+const up = x => Math.ceil(x - 1e-9);
+const vuCat = () => VU_CAT.find(c => c.id === VU.cat) || VU_CAT[0];
+
+function vuSet(key, value, redraw) {
+  VU[key] = value;
+  if (key === 'cat') VU.loco = !!vuCat().loco;
+  try { localStorage.setItem('vu45', JSON.stringify(VU)); } catch (e) {}
+  redraw ? vuRender() : vuCalc();
+}
+function vuN(p, value) { VU.n[p] = value; vuSet('n', VU.n); }
+function vuClear() { VU.n = {}; vuSet('all', false, 1); }
+function vuRender() {
+  const c = vuCat();
+  $('vuCat').innerHTML = VU_CAT.map(x => `<option value="${x.id}" ${x.id === c.id ? 'selected' : ''}>${x.name} - ${x.norm} тс</option>`).join('');
+  $('vuSlope').innerHTML = `<option value="u">0,6 оси - единая норма (две и более дорог)</option>` +
+    VU_HAND.map((h, i) => `<option value="${i}" ${String(i) === String(VU.slope) ? 'selected' : ''}>уклон ${h[0].toFixed(3).replace('.', ',')} - ${h[3] ? ru(h[3]) + ' оси' : 'только башмаки'}</option>`).join('');
+  $('vuW').value = VU.w; $('vuAx').value = VU.ax; $('vuLw').value = VU.lw; $('vuHand').value = VU.hand;
+  $('vuLocoSw').classList.toggle('on', VU.loco); $('vuLwBox').style.display = VU.loco ? '' : 'none';
+  $('vuCatNote').textContent = (c.note || '') + (VU.loco ? ' Оси локомотива внесите в строку с его нажатием.' : '');
+  $('vuHandBox').style.display = c.pas ? 'none' : '';
+  const rows = VU_P.filter(p => VU.all || c.rows.includes(p) || num(VU.n[p]) || (VU.loco && [12, 14, 16].includes(p)));
+  $('vuRows').innerHTML = `<div class="vrow head"><span>Нажатие на ось</span><span style="text-align:center">Осей</span><span class="r">Нажатие, тс</span></div>` +
+    rows.map(p => `<div class="vrow"><span><b>${ru(p, 2)}</b><small>${VU_HINT[p] || ''}</small></span>
+      <input inputmode="numeric" value="${esc(VU.n[p] || '')}" placeholder="0" oninput="vuN(${p},this.value)" aria-label="Осей с нажатием ${ru(p, 2)} тс"><span class="r" id="vuR${p * 100}"></span></div>`).join('') +
+    `<div class="vrow tot"><span><b>Всего</b></span><span class="r" style="text-align:center" id="vuTotAx"></span><span class="r" id="vuTot"></span></div>` +
+    (VU.all ? '' : `<button class="vmore" onclick="vuSet('all',true,1)">Показать все строки бланка</button>`);
+  vuCalc();
+}
+function vuCalc() {
+  const c = vuCat(), w = num(VU.w), wAll = w + (VU.loco ? num(VU.lw) : 0);
+  let fact = 0, braked = 0;
+  VU_P.forEach(p => { const n = Math.floor(num(VU.n[p])), el = $('vuR' + p * 100); fact += n * p; braked += n; if (el) el.textContent = n ? ru(n * p, 2) : ''; });
+  fact = Math.round(fact * 100) / 100;
+  $('vuTotAx').textContent = braked || ''; $('vuTot').textContent = braked ? ru(fact, 2) : '';
+  const need = wAll * c.norm / 100, per = wAll ? fact / wAll * 100 : 0, axles = Math.floor(num(VU.ax)) || braked;
+  let out = `<div class="card empty">Введите вес состава и количество осей по строкам нажатия.</div>`, verdict = '';
+  if (wAll && braked) {
+    const lack = need - fact, cls = lack <= 0 ? 'ok' : c.min && per >= c.min ? 'warn' : 'bad';
+    if (lack <= 0) verdict = `Поезд обеспечен тормозами: ${ru(per)} тс на 100 тс при норме ${c.norm}.`;
+    else if (cls === 'warn') {
+      const d = up(c.norm - per), cut = k => Math.floor((c.v - k * d) / 5) * 5;
+      verdict = `Ниже единой нормы ${c.norm} тс, но не меньше допускаемого минимума ${c.min} тс. Отправление - только в случаях п. 4.2 и 4.3 Норм, скорость ` +
+        (c.k === 2 ? `не более ${cut(2)} км/ч` : `не более ${cut(1)} км/ч при спуске до 0,006 и ${cut(2)} км/ч - круче 0,006 до 0,015`) +
+        ` (недостаёт ${d} тс на 100 тс, п. 4.4).`;
+    } else verdict = c.min ? `Нажатие меньше допускаемого минимума ${c.min} тс на 100 тс (таблица 2). Скорость устанавливает владелец инфраструктуры (п. 5.1).`
+      : `Нажатие меньше нормы ${c.norm} тс на 100 тс. Для этой категории допускаемый минимум в таблице 2 не задан - действуйте по указанию владельца инфраструктуры.`;
+    out = `<div class="card sum"><div class="big">${ru(fact)} тс <small>фактически при требуемых ${ru(up(need))} тс</small></div>
+      <div class="prog ${cls === 'ok' ? '' : cls === 'warn' ? 'over' : 'bad'}"><i style="width:${Math.min(100, fact / need * 100)}%"></i></div>
+      <div class="stats"><div><small>На 100 тс</small><b>${ru(per)} тс</b></div><div><small>${lack <= 0 ? 'Запас' : 'Не хватает'}</small><b>${ru(Math.abs(lack))} тс</b></div>
+        <div><small>Тормозных осей</small><b>${braked}${axles > braked ? ' из ' + axles : ''}</b></div></div>
+      <div class="verd ${cls}">${verdict}</div>
+      ${braked > axles ? `<div class="verd warn">Осей в строках нажатия больше, чем всего осей - проверьте ввод.</div>` : ''}</div>`;
+  } else if (wAll) out = `<div class="card sum"><div class="big">${ru(up(need))} тс <small>требуемое нажатие: ${ru(wAll)} тс × ${c.norm} / 100</small></div></div>`;
+  $('vuOut').innerHTML = out;
+
+  // ручные тормоза считаются на вес состава, без локомотива
+  const h = VU.slope === 'u' ? null : VU_HAND[+VU.slope], kAx = h ? h[3] : .6, needAx = w && kAx ? up(w * kAx / 100) : 0, have = Math.floor(num(VU.hand));
+  let hand = '';
+  if (!c.pas && w) {
+    const load = axles ? w / axles : 0, shoes = h && load ? up(w * h[load >= 10 ? 1 : 2] / 100) : 0;
+    hand = (kAx ? `Требуется ручных тормозных осей: <b>${needAx}</b> (${ru(w)} тс × ${ru(kAx)} / 100).` : 'При таком уклоне состав удерживают тормозными башмаками.') +
+      (h ? (load ? ` Либо тормозных башмаков: <b>${shoes}</b> (нагрузка на ось ${ru(load)} тс).` : ' Укажите «Всего осей» - посчитаю тормозные башмаки.') : '') +
+      (VU.hand !== '' && needAx ? (have >= needAx ? ' Ручных тормозов достаточно.' : ` Не хватает <b>${needAx - have}</b> осей - недостающие заменяют тормозными башмаками.`) : '') +
+      (h && h[0] > .012 ? ' При уклонах круче 0,012 норму устанавливает владелец инфраструктуры.' : '');
+  }
+  $('vuHandOut').innerHTML = hand;
+  const kv = (k, v) => `<div class="kv"><span>${k}</span><b>${v || '-'}</b></div>`;
+  $('vuBlank').innerHTML = kv('Вес поезда, тс', wAll ? ru(wAll) : '') + kv('Всего осей', axles) + kv('Требуемое нажатие колодок, тс', wAll ? ru(up(need)) : '') +
+    kv('Всего: осей / нажатие, тс', braked ? `${braked} / ${ru(fact, 2)}` : '') +
+    (c.pas ? '' : kv('Ручных тормозов в осях', needAx) + kv('Наличие ручных тормозных осей', VU.hand !== '' ? have : ''));
+}
+
+// ---- учёт часов: поездки хранятся в браузере на этом устройстве (localStorage).
+// Правила - из «Особенностей режима рабочего времени и времени отдыха» (приказ Минтранса № 339).
+const K_HOME = 2.6, MIN_HOME = 960, MAX_CONT = 720, MAX_TRIP = 4320;
+// норма часов при 40-часовой неделе по производственному календарю; свою норму пользователь задаёт сам
+const NORMS = {'2026-01': 120, '2026-02': 152, '2026-03': 168, '2026-04': 175, '2026-05': 151, '2026-06': 167,
+  '2026-07': 184, '2026-08': 168, '2026-09': 176, '2026-10': 176, '2026-11': 159, '2026-12': 176};
+const HRS = load('hours', {shifts: [], norms: {}, seq: 0});
+// время считаем в минутах, как введено (местное/московское), без часовых поясов
+const tm = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10), +s.slice(11, 13), +s.slice(14, 16)) / 60000;
+const clip = (a, b, lo, hi) => Math.max(0, Math.min(b, hi) - Math.max(a, lo));
+function night(a, b, lo, hi) {   // ночные минуты (22:00-06:00) отрезка [a, b] в пределах [lo, hi]
+  let total = 0, day = Math.floor(a / 1440) * 1440 - 1440;
+  a = Math.max(a, lo); b = Math.min(b, hi);
+  for (; day < b; day += 1440) total += clip(a, b, day + 1320, day + 1800);
+  return total;
+}
+const bounds = ym => [Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1) / 60000, Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 1) / 60000];
+function defaultNorm(ym) {
+  if (NORMS[ym]) return NORMS[ym];
+  const [lo, hi] = bounds(ym);   // календаря на этот год нет: будни x 8 без учёта праздников
+  let n = 0;
+  for (let t = lo; t < hi; t += 1440) n += [1, 2, 3, 4, 5].includes(new Date(t * 60000).getUTCDay());
+  return 8 * n;
+}
+function tripCalc(x, lo = -Infinity, hi = Infinity) {   // lo/hi - границы месяца: поездка через границу делится по календарю
+  const a = tm(x.start), b = tm(x.end), segs = x.rest_start ? [[a, tm(x.rest_start)], [tm(x.rest_end), b]] : [[a, b]];
+  const sum = f => segs.reduce((s, [p, q]) => s + f(p, q), 0);
+  const work = sum((p, q) => q - p), rest = x.rest_start ? tm(x.rest_end) - tm(x.rest_start) : 0;
+  const home = Math.max(MIN_HOME, Math.round(work * K_HOME) - rest), warn = [];
+  if (segs.some(([p, q]) => q - p > MAX_CONT)) warn.push('Непрерывная работа больше 12 часов');
+  if (rest && rest < (segs[0][1] - segs[0][0]) / 2) warn.push('Отдых в пункте оборота меньше половины работы до него');
+  return Object.assign({}, x, {work, rest, home, warn, night: sum((p, q) => night(p, q, -Infinity, Infinity)),
+    next: new Date((b + home) * 60000).toISOString().slice(0, 16),
+    month_work: sum((p, q) => clip(p, q, lo, hi)), month_night: sum((p, q) => night(p, q, lo, hi))});
+}
+function hoursData(ym) {
+  const [lo, hi] = bounds(ym), own = HRS.norms[ym];
+  const items = HRS.shifts.filter(x => tm(x.start) < hi && tm(x.end) > lo).sort((p, q) => p.start < q.start ? -1 : 1).map(x => tripCalc(x, lo, hi));
+  const last = HRS.shifts.reduce((m, x) => !m || x.end > m.end ? x : m, null);
+  return {ym, norm: own != null ? own : defaultNorm(ym), norm_own: own != null, items, last: last && tripCalc(last),
+    work: items.reduce((s, i) => s + i.month_work, 0), night: items.reduce((s, i) => s + i.month_night, 0)};
+}
+function tripError(x) {   // текст ошибки или пустая строка
+  const ok = s => /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(s);
+  if (!ok(x.start) || !ok(x.end) || ((x.rest_start || x.rest_end) && !(ok(x.rest_start) && ok(x.rest_end)))) return 'Укажите дату и время полностью.';
+  const a = tm(x.start), b = tm(x.end);
+  if (b <= a) return 'Окончание работы должно быть позже явки.';
+  if (b - a > MAX_TRIP) return 'Поездка длиннее 72 часов - проверьте даты.';
+  if (x.rest_start && !(a < tm(x.rest_start) && tm(x.rest_start) < tm(x.rest_end) && tm(x.rest_end) < b))
+    return 'Отдых в пункте оборота должен быть внутри поездки: явка - начало отдыха - конец отдыха - окончание.';
+  if (HRS.shifts.some(s => tm(s.start) < b && tm(s.end) > a)) return 'На это время уже записана другая поездка.';
+  return '';
+}
+
+// ---- слова и их основы. Стеммер и разбор слов повторяют build.py - они должны совпадать буква в букву.
+// <stem>
+const VOW = 'аеиоуыэюя', RV = new RegExp(`^(.*?[${VOW}])(.*)$`), DERIV = new RegExp(`[^${VOW}][${VOW}].*ость?$`);
+// пары [окончания без условий, окончания только после а/я]
+const GERUND = [/(ив|ивши|ившись|ыв|ывши|ывшись)$/, /[ая](в|вши|вшись)$/];
+const ADJ = [/(ее|ие|ые|ое|ими|ыми|ей|ий|ый|ой|ем|им|ым|ом|его|ого|ему|ому|их|ых|ую|юю|ая|яя|ою|ею)$/, null];
+const PART = [/(ивш|ывш|ующ)$/, /[ая](ем|нн|вш|ющ|щ)$/];
+const VERB = [/(ила|ыла|ена|ейте|уйте|ите|или|ыли|ей|уй|ил|ыл|им|ым|ен|ило|ыло|ено|ят|ует|уют|ит|ыт|ены|ить|ыть|ишь|ую|ю)$/,
+  /[ая](ла|на|ете|йте|ли|й|л|ем|н|ло|но|ет|ют|ны|ть|ешь|нно)$/];
+const NOUN = [/(а|ев|ов|ие|ье|е|иями|ями|ами|еи|ии|и|ией|ей|ой|ий|й|иям|ям|ием|ем|ам|ом|о|у|ах|иях|ях|ы|ь|ию|ью|ю|ия|ья|я)$/, null];
+function cut(rv, [free, bound]) {   // снимает самое длинное подходящее окончание; null - если ни одно не подошло
+  const a = free.exec(rv), b = bound && bound.exec(rv), n = Math.max(a ? a[0].length : 0, b ? b[0].length - 1 : 0);
+  return n ? rv.slice(0, -n) : null;
+}
+function stem(word) {
+  const m = RV.exec(word);
+  if (!m) return word;
+  let rv = m[2], t = cut(rv, GERUND);
+  if (t === null) {
+    rv = rv.replace(/(ся|сь)$/, '');
+    t = cut(rv, ADJ);
+    if (t !== null) { const p = cut(t, PART); if (p !== null) t = p; }
+    else { t = cut(rv, VERB); if (t === null) t = cut(rv, NOUN); if (t === null) t = rv; }
+  }
+  rv = t.replace(/и$/, '');
+  if (DERIV.test(rv)) rv = rv.replace(/ость?$/, '');
+  rv = rv.endsWith('ь') ? rv.slice(0, -1) : rv.replace(/ейше?$/, '').replace(/нн$/, 'н');
+  return m[1] + rv;
+}
+let STOP = new Set();
+const low = s => s.toLowerCase().replace(/ё/g, 'е');
+const keep = w => !STOP.has(w) && (w.length > 1 || /\d/.test(w));
+const tokens = text => (low(text).match(/[a-zа-я0-9]+/g) || []).filter(keep).map(stem);
+function fnv(s) {   // номер файла индекса по слову
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+// </stem>
+
+// ---- поиск по документам: индекс собран заранее (build.py), всё считается в браузере
+let META = null, RUN = 0, HITS = [], SHOWN = 0, MARKS = new Set();
+const FILES = {}, ROWS = {};
+function data(path) {   // файл индекса: скачивается один раз
+  return FILES[path] || (FILES[path] = fetch(`data/${path}?v=${META.v}`).then(r => { if (!r.ok) throw new Error(path); return r.json(); })
+    .catch(e => { delete FILES[path]; throw e; }));
+}
+const own = (o, k) => Array.isArray(o[k]) || typeof o[k] === 'number' ? o[k] : null;   // в индексе могут быть слова вроде constructor
+const posting = async s => own(await data(`i/${fnv(s) % META.shards}.json`), s);
+function lev(a, b) {   // число правок, чтобы из одного слова получить другое
+  let prev = Array.from({length: b.length + 1}, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] !== b[j - 1]));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+async function near(s) {   // опечатка: самое частое из похожих слов, которые есть в документах
+  if (s.length < 5 || /^\d+$/.test(s)) return null;
+  const vocab = await data('vocab.json'), lim = s.length >= 8 ? 2 : 1;
+  let best = null, bd = lim + 1, bn = 0;
+  for (const w in vocab) {
+    if (w[0] !== s[0] || Math.abs(w.length - s.length) > lim) continue;
+    const d = lev(s, w), n = own(vocab, w) || 0;
+    if (d < bd || (d === bd && n > bn)) { best = w; bd = d; bn = n; }
+  }
+  return bd <= lim ? best : null;
+}
+const plural = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? b : c;
+const fileUrl = (doc, page) => `files/${encodeURIComponent(doc.file)}` + (page && /\.pdf$/i.test(doc.file) ? `#page=${page}` : '');
+const docItem = (x, sub) => `<a class="item" href="${fileUrl(x)}" target="_blank" rel="noopener"><span class="badge" style="--c:var(--cyan)">${ic('doc')}</span>
+  <span><b>${esc(x.name)}</b><small>${esc(sub)}</small></span><span class="go">${ic('chev')}</span></a>`;
+
+async function find(text) {
+  text = text.trim(); $('q').value = text;
+  const my = ++RUN, say = t => { if (my === RUN) $('found').innerHTML = `<div class="count"><span>${t}</span><a onclick="find('')">сбросить</a></div>`; };
+  try { history.replaceState(null, '', text ? '#q=' + encodeURIComponent(text) : location.pathname); } catch (e) {}
+  $('sections').style.display = text ? 'none' : '';
+  if (!text) { $('found').innerHTML = ''; return; }
+  if (!META) return say('Список документов не загрузился. Обновите страницу.');
+  const first = Object.create(null);   // основа -> слово, как его набрали
+  (low(text).match(/[a-zа-я0-9]+/g) || []).filter(keep).forEach(w => { const s = stem(w); if (!first[s]) first[s] = w; });
+  const stems = Object.keys(first);
+  if (!stems.length) return say('Введите слова для поиска - предлоги и союзы не учитываются.');
+  $('found').innerHTML = '<div class="sk" style="height:120px;margin-bottom:10px"></div><div class="sk" style="height:120px"></div>';
+  let lists;
+  try {
+    lists = await Promise.all(stems.map(async s => {
+      let l = await posting(s), alt = null;
+      if (!l && (alt = await near(s))) l = await posting(alt);
+      return {s: alt || s, word: first[s], l, fixed: !!alt};
+    }));
+  } catch (e) { return say('Нет связи с сайтом. Повторите поиск.'); }
+  if (my !== RUN) return;
+  const got = lists.filter(x => x.l), lost = lists.filter(x => !x.l).map(x => `«${esc(x.word)}»`), fixed = got.filter(x => x.fixed).map(x => `«${esc(x.word)}»`);
+  const acc = new Map();   // фрагмент -> [сколько слов запроса в нём есть, вес]
+  got.forEach(({l}) => { for (let i = 0; i < l.length; i += 2) { const e = acc.get(l[i]); if (e) { e[0]++; e[1] += l[i + 1]; } else acc.set(l[i], [1, l[i + 1]]); } });
+  // сначала фрагменты, где есть все слова; если таких нет - где больше слов запроса
+  let rows = [...acc], all = rows.filter(r => r[1][0] === got.length);
+  const whole = all.length > 0;
+  rows = (whole ? all : rows).sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1]);
+  HITS = rows.slice(0, 200).map(r => r[0]); SHOWN = 0; MARKS = new Set(got.map(x => x.s));
+  const names = META.docs.filter(d => stems.every(s => d.stems.has(s)));
+  const n = rows.length, head = !n ? 'В тексте документов таких слов нет.'
+    : (whole ? `${n} ${plural(n, 'фрагмент', 'фрагмента', 'фрагментов')}` + (got.length > 1 ? (lost.length ? ' с остальными словами' : ' со всеми словами') : '')
+      : 'Все слова вместе не встречаются - показаны фрагменты с частью слов') + (n > 200 ? ', показаны первые 200.' : '.');
+  $('found').innerHTML = `<div class="count"><span>${head}${n && lost.length ? ` Нет в документах: ${lost.join(', ')}.` : ''}` +
+    `${fixed.length ? ` Похоже на опечатку: ${fixed.join(', ')} - искал близкое слово.` : ''}</span><a onclick="find('')">сбросить</a></div>` +
+    (names.length ? `<div class="card list" style="margin-bottom:10px">${names.map(d => docItem(d, 'документ целиком')).join('')}</div>` : '') +
+    `<div id="hits"></div><button class="morebtn" id="moreBtn" style="display:none" onclick="showMore()">Показать ещё</button>`;
+  showMore();
+}
+async function showMore() {
+  const my = RUN, ids = HITS.slice(SHOWN, SHOWN + 20);
+  let rows;
+  try { rows = await Promise.all(ids.map(async id => (await data(`t/${Math.floor(id / META.per)}.json`))[id % META.per])); } catch (e) { return; }
+  if (my !== RUN || !$('hits')) return;
+  SHOWN += ids.length;
+  $('hits').insertAdjacentHTML('beforeend', rows.map((r, i) => hitCard(ids[i], r)).join(''));
+  $('moreBtn').style.display = SHOWN < HITS.length ? '' : 'none';
+}
+const isHit = w => { w = low(w); return keep(w) && MARKS.has(stem(w)); };
+function marked(text, from, to) {   // кусок текста с подсветкой найденных слов
+  const re = /[a-zа-яё0-9]+/gi;
+  let out = '', at = from;
+  re.lastIndex = from;
+  for (let m; (m = re.exec(text)) && m.index < to;) {
+    if (!isHit(m[0])) continue;
+    out += esc(text.slice(at, m.index)) + `<mark>${esc(m[0])}</mark>`; at = m.index + m[0].length;
+  }
+  return out + esc(text.slice(at, Math.max(at, to)));
+}
+function windowOf(text) {   // кусок примерно в 300 знаков, куда попало больше всего найденных слов
+  if (text.length <= 360) return [0, text.length];
+  const re = /[a-zа-яё0-9]+/gi, pos = [];
+  for (let m; (m = re.exec(text));) if (isHit(m[0])) pos.push(m.index);
+  let best = 0, top = 0;
+  pos.forEach((p, i) => { let k = i; while (k < pos.length && pos[k] - p < 260) k++; if (k - i > top) { top = k - i; best = p; } });
+  let from = text.lastIndexOf(' ', Math.max(0, best - 40)) + 1, to = text.indexOf(' ', from + 300);
+  if (from < 30) from = 0;
+  if (to < 0 || text.length - to < 40) to = text.length;
+  return [from, to];
+}
+function hitCard(id, row) {
+  const [d, label, text] = ROWS[id] = row, doc = META.docs[d], [from, to] = windowOf(text), page = /^стр\. (\d+)$/.exec(label);
+  const cut = from > 0 || to < text.length;
+  return `<div class="card hit"><div class="src">${ic('doc')}<span>${esc(doc.name)}</span></div>
+    <div class="tx ${cut ? 'cut' : ''}" ${cut ? `onclick="fullHit(this,${id})" title="Показать фрагмент целиком"` : ''}>${from ? '…' : ''}${marked(text, from, to)}${to < text.length ? '…' : ''}</div>
+    <div class="at"><span>${esc(label)}</span><a href="${fileUrl(doc, page && page[1])}" target="_blank" rel="noopener">${page ? 'Открыть страницу' : 'Открыть документ'}</a></div></div>`;
+}
+function fullHit(el, id) { el.innerHTML = marked(ROWS[id][2], 0, ROWS[id][2].length); el.classList.remove('cut'); el.onclick = null; el.title = ''; }
+
+// ---- документы
+function renderDocs() {
+  const d = META ? META.docs : [];
+  $('docsSub').textContent = d.length ? `${d.length} ${plural(d.length, 'документ', 'документа', 'документов')} · обновлено ${META.built}` : 'Файлы открываются целиком.';
+  $('docs').innerHTML = d.length ? `<div class="card list">` + d.map(x => docItem(x, !x.chunks ? 'без текста - поиск по этому файлу не работает'
+    : /\.pdf$/i.test(x.file) ? `${x.parts} стр.` : x.file.split('.').pop().toUpperCase())).join('') + `</div>`
+    : `<div class="card empty">${META ? 'Документов пока нет.' : 'Список документов не загрузился. Обновите страницу.'}</div>`;
+}
+
+// ---- старт
+(async () => {
+  loadHours();
+  try { META = await (await fetch('data/meta.json', {cache: 'no-cache'})).json(); }
+  catch (e) { $('homeSub').textContent = 'Список документов не загрузился. Обновите страницу.'; return; }
+  STOP = new Set(META.stop);
+  META.docs.forEach(d => d.stems = new Set(tokens(d.name)));
+  const n = META.docs.length;
+  $('homeSub').textContent = n ? `${n} ${plural(n, 'документ', 'документа', 'документов')} в базе. Ищу слова во всех формах: «поезд» найдёт и «поезда», и «поездом».` : 'Документов пока нет.';
+  $('tileDocs').textContent = n ? `${n} ${plural(n, 'файл', 'файла', 'файлов')} целиком` : 'пока пусто';
+  const fromHash = () => {   // ссылкой на поиск можно поделиться: адрес хранит запрос
+    let q = '';
+    try { q = decodeURIComponent((/^#q=(.*)$/.exec(location.hash) || [])[1] || ''); } catch (e) {}
+    if (q !== $('q').value.trim()) { go('home'); find(q); }
+  };
+  addEventListener('hashchange', fromHash);
+  fromHash();
+})();
+</script>
+</body>
+</html>
