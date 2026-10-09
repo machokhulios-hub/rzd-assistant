@@ -168,9 +168,18 @@ def parts_of(path: Path) -> list:
     if hit.exists():
         return json.loads(hit.read_text("utf-8"))
     parts = read_parts(path)
+    if not any(t.strip() for _, t in parts):   # скан: берём переписанный вручную текст из documents/_text/<имя>.txt
+        side = SRC / "_text" / (path.stem + ".txt")
+        return _sidecar(side) if side.exists() else parts
     CACHE.mkdir(exist_ok=True)
     hit.write_text(json.dumps(parts, ensure_ascii=False), "utf-8")
     return parts
+
+
+def _sidecar(path: Path) -> list[tuple[str, str]]:
+    """Текст скана, набранный вручную: страницы отделены строками «=== стр. N ===»."""
+    parts = re.split(r"^=== (стр\. \d+) ===\s*$", path.read_text("utf-8"), flags=re.M)
+    return [(parts[i], parts[i + 1]) for i in range(1, len(parts) - 1, 2)]
 
 
 def clean(text: str) -> str:
@@ -216,7 +225,7 @@ def build():
         start = len(chunks)
         for label, text in parts:
             chunks += [(len(docs), label, piece) for piece in split_text(clean(text))]
-        docs.append({"name": nfc(path.stem), "file": nfc(path.name), "parts": len(parts), "chunks": len(chunks) - start})
+        docs.append({"name": re.sub(r"[_\s]+", " ", nfc(path.stem)).strip(), "file": nfc(path.name), "parts": len(parts), "chunks": len(chunks) - start})
         note = "" if len(chunks) > start else "  <- нет текста (скан?), поиск по файлу работать не будет"
         print(f"{path.name}: {len(parts)} стр./частей, {len(chunks) - start} фрагментов{note}")
 
