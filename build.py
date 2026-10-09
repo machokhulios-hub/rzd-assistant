@@ -209,7 +209,10 @@ def dump(path: Path, obj):
 
 def build():
     nfc = lambda s: unicodedata.normalize("NFC", s)
-    found = sorted(p for p in SRC.iterdir() if p.is_file() and not p.name.startswith(".")) if SRC.exists() else []
+    # документы лежат в documents/ и в его папках; папка = раздел на сайте (папки на _ и . - служебные)
+    tops = sorted(SRC.iterdir()) if SRC.exists() else []
+    found = [p for p in tops if p.is_file()] + [p for d in tops if d.is_dir() and d.name[0] not in "._" for p in sorted(d.iterdir()) if p.is_file()]
+    found = [p for p in found if not p.name.startswith(".")]
     for p in found:
         if p.suffix.lower() not in EXTS:
             print(f"пропущен: {p.name} (нужен PDF, DOCX или TXT)")
@@ -225,7 +228,8 @@ def build():
         start = len(chunks)
         for label, text in parts:
             chunks += [(len(docs), label, piece) for piece in split_text(clean(text))]
-        docs.append({"name": re.sub(r"[_\s]+", " ", nfc(path.stem)).strip(), "file": nfc(path.name), "parts": len(parts), "chunks": len(chunks) - start})
+        docs.append({"name": re.sub(r"[_\s]+", " ", nfc(path.stem)).strip(), "file": nfc(path.relative_to(SRC).as_posix()),
+                     "sec": "" if path.parent == SRC else nfc(path.parent.name), "parts": len(parts), "start": start, "chunks": len(chunks) - start})
         note = "" if len(chunks) > start else "  <- нет текста (скан?), поиск по файлу работать не будет"
         print(f"{path.name}: {len(parts)} стр./частей, {len(chunks) - start} фрагментов{note}")
 
@@ -245,8 +249,13 @@ def build():
     for d in ("data/i", "data/t", "files"):
         (OUT / d).mkdir(parents=True)
     version = f"{int(time.time()):x}"
-    (OUT / "index.html").write_text((WEB / "index.html").read_text("utf-8").replace("__BUILD__", version), "utf-8")
+    for f in WEB.iterdir():          # страница, значки, билеты, работа без сети
+        if f.name == "index.html":
+            (OUT / f.name).write_text(f.read_text("utf-8").replace("__BUILD__", version), "utf-8")
+        elif f.is_file() and not f.name.startswith("."):
+            shutil.copyfile(f, OUT / f.name)
     for path, d in zip(files, docs):
+        (OUT / "files" / d["file"]).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, OUT / "files" / d["file"])
     groups = defaultdict(dict)
     for t, v in post.items():
@@ -257,8 +266,9 @@ def build():
         dump(OUT / f"data/t/{k // PER_FILE}.json", chunks[k:k + PER_FILE])
     # словарь для опечаток: основа -> в скольких фрагментах встречается
     dump(OUT / "data/vocab.json", {t: c for t, c in df.items() if len(t) >= 4 and not t.isdigit()})
+    size = sum(f.stat().st_size for d in ("data", "files") for f in (OUT / d).rglob("*") if f.is_file())
     dump(OUT / "data/meta.json", {"v": version, "built": time.strftime("%d.%m.%Y"), "docs": docs, "chunks": n,
-                                  "shards": shards, "per": PER_FILE, "stop": sorted(STOP)})
+                                  "shards": shards, "per": PER_FILE, "bytes": size, "stop": sorted(STOP)})
     print(f"Готово: документов {len(docs)}, фрагментов {n}, слов в индексе {len(post)}, файлов индекса {shards} -> {OUT.name}/")
 
 

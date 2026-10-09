@@ -4,13 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0d0f13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
 <meta name="description" content="Поиск по нормативным документам железнодорожника и расчёты: отдых бригады, справка ВУ-45, учёт часов.">
 <title>РЖД Ассистент - документы и расчёты</title>
 <style>
 :root{
   --bg:#0d0f13; --card:#181b21; --card2:#1f232b; --line:#2a2f37; --text:#f3f5f8; --muted:#8b949e;
   --red:#ff5252; --brand:#e21a1a; --blue:#4da3ff; --amber:#ffc13b; --violet:#a78bfa; --green:#34d399; --cyan:#2dd4dc;
-  --r:20px; --pad:16px;
+  --r:20px; --pad:16px; --glass:rgba(13,15,19,.9);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,-apple-system,"SF Pro Text",Roboto,sans-serif;font-size:15px;line-height:1.45}
@@ -22,7 +26,7 @@ svg{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.9;stroke-l
 .stripe{height:4px;background:var(--brand)}
 
 /* шапка */
-header{position:sticky;top:0;z-index:20;background:rgba(13,15,19,.86);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+header{position:sticky;top:0;z-index:20;background:var(--glass);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
 .bar{display:flex;align-items:center;gap:12px;height:60px}
 .logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:22px;color:var(--red);
   background:rgba(255,82,82,.16);border:1px solid rgba(255,82,82,.4)}
@@ -57,7 +61,7 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .tile .dot{position:absolute;right:16px;top:18px;width:8px;height:8px;border-radius:50%;background:var(--c)}
 .soon{position:absolute;right:12px;top:12px;font-size:11px;font-weight:700;padding:4px 8px;border-radius:999px;color:var(--muted);border:1px solid var(--line)}
 
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;padding:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px}
 .seg button{padding:10px;border-radius:10px;font-weight:700;color:var(--muted)}
 .seg button.on{background:var(--card2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
 /* учёт часов */
@@ -82,7 +86,7 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .next small{color:var(--muted);font-size:12.5px}
 .form{padding:16px;display:grid;gap:12px}
 .form label{display:grid;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted)}
-.form input[type=datetime-local],.form input[type=time]{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;outline:0;
+.form input[type=datetime-local],.form input[type=time],.form input[type=date]{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;outline:0;
   color:var(--text);font-weight:600;color-scheme:dark;-webkit-appearance:none;min-height:46px}
 .form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .form label{min-width:0}
@@ -141,9 +145,9 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .sw.on{background:var(--green)}.sw.on:after{left:21px}
 
 /* нижнее меню, шторка, скелетон */
-nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(13,15,19,.9);backdrop-filter:blur(16px);border-top:1px solid var(--line);
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--glass);backdrop-filter:blur(16px);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom)}
-nav .wrap{display:grid;grid-template-columns:repeat(4,1fr);height:64px;padding:0 6px}
+nav .wrap{display:grid;grid-template-columns:repeat(5,1fr);height:64px;padding:0 6px}
 nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted)}
 nav button svg{font-size:23px}
 nav button.on{color:var(--text)}nav button.on svg{color:var(--red)}
@@ -181,6 +185,47 @@ a.item{color:inherit;text-decoration:none}
 .cal button.in{background:rgba(52,211,153,.16);color:var(--text)}
 .cal button.edge{background:var(--green);color:#0d0f13;font-weight:800}
 .vac .big{font-size:30px;margin-top:14px}
+
+/* сворачиваемые блоки */
+.fold{margin-top:26px}
+.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 0 10px}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary span{text-transform:none;letter-spacing:0;font-weight:600;color:var(--text);opacity:.85}
+.fold>summary svg{margin-left:auto;font-size:16px;transition:transform .2s}
+.fold[open]>summary svg{transform:rotate(90deg)}
+
+/* недавние запросы, разделы поиска, закладки */
+.chips{display:flex;gap:8px;overflow-x:auto;margin:12px calc(-1*var(--pad)) 0;padding:0 var(--pad) 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips:empty{display:none}
+.chip{white-space:nowrap;padding:8px 12px;border-radius:999px;background:var(--card2);border:1px solid var(--line);font-size:13px;font-weight:500}
+.chip.on{border-color:var(--red);color:var(--red)}
+.chip.dim{color:var(--muted);background:none}
+.star{flex:none;width:32px;height:32px;margin:-6px -6px -6px auto;display:grid;place-items:center;color:var(--muted)}
+.hit .src .star svg{color:inherit;font-size:18px}
+.star.on{color:var(--amber)}
+.hit .src .star.on svg{fill:currentColor}
+
+/* сроки, билеты, настройки */
+.xbtn{margin-left:auto;flex:none;width:36px;height:36px;border-radius:12px;color:var(--muted);border:1px solid var(--line);font-size:16px;display:grid;place-items:center}
+.due.ok{color:var(--green)}.due.soon{color:var(--amber)}.due.late{color:var(--red)}
+.qz{padding:14px 16px;margin-bottom:10px}
+.qz p{margin:0 0 12px}
+.qz .row2{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700}
+.qz .row2 button:first-child{display:flex;align-items:center;gap:8px}
+.qz .sw{margin-left:0}
+.linkbtn{color:var(--blue);font-weight:700;font-size:13px}
+.qz .linkbtn{margin-left:auto}
+
+/* светлая тема и крупный шрифт */
+html.light{--bg:#f4f5f7;--card:#fff;--card2:#eef0f3;--line:#d9dde3;--text:#14171c;--muted:#5d6672;--red:#d92b2b;--blue:#1a6fd6;--amber:#a86500;
+  --violet:#6d4fd6;--green:#0f9d6b;--cyan:#0b8f9a;--glass:rgba(244,245,247,.92)}
+html.light .hit mark{background:rgba(255,193,59,.38);color:#5a3a00}
+html.light .form input,html.light .form select.inp{color-scheme:light}
+html.light input::placeholder{color:#8a93a0}
+html.light .cal button.edge{color:#fff}
+html.light .sk{background:linear-gradient(90deg,var(--card2) 25%,#e2e5ea 37%,var(--card2) 63%);background-size:400% 100%}
+html.big{zoom:1.15}
 </style>
 </head>
 <body>
@@ -205,6 +250,8 @@ a.item{color:inherit;text-decoration:none}
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21.5s7-6.2 7-11.5a7 7 0 0 0-14 0c0 5.300 7 11.500 7 11.500z"/><circle cx="12" cy="10" r="2.5"/></symbol>
   <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="19" rx="3"/><path d="M8.5 7h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 15.5h.01M12 15.5h.01M15.5 15.5h.01M8.5 19h.01M12 19h.01M15.5 19h.01"/></symbol>
   <symbol id="i-brake" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><path d="M4 5.5a10 10 0 0 0 0 13M20 5.5a10 10 0 0 1 0 13M12 9v3.5M12 15h.01"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.200 2.800 1-5.900-4.300-4.100 5.900-.800z"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.300"/><circle cx="19" cy="12" r="1.300"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></symbol>
 </svg>
 
@@ -226,22 +273,35 @@ a.item{color:inherit;text-decoration:none}
     <div class="found" id="found"></div>
 
     <div id="sections">
+      <div class="chips" id="recent"></div>
+
+      <details class="fold" data-fold="marks" id="marksBox" style="display:none">
+        <summary>Закладки <span id="marksN"></span><svg><use href="#i-chev"/></svg></summary>
+        <div id="marks"></div>
+      </details>
+
       <h2>Разделы</h2>
       <div class="tiles">
         <button class="card tile" style="--c:var(--green)" onclick="go('hours')"><span class="badge"><svg><use href="#i-clock"/></svg></span><i class="dot"></i><b>Учёт часов</b><small id="tileHours">поездки, отдых, итог за месяц</small></button>
+        <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><i class="dot"></i><b>Документы</b><small id="tileDocs">все файлы по разделам</small></button>
         <button class="card tile" style="--c:var(--cyan)" onclick="go('calc','rest')"><span class="badge"><svg><use href="#i-calc"/></svg></span><i class="dot"></i><b>Бригадник</b><small>отдых в пункте оборота и время подъёма</small></button>
         <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><i class="dot"></i><b>Справка ВУ-45</b><small>нажатие колодок и ручные тормоза</small></button>
-        <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><i class="dot"></i><b>Документы</b><small id="tileDocs">все файлы целиком</small></button>
+        <button class="card tile" style="--c:var(--red)" onclick="go('calc','shoe')"><span class="badge"><svg><use href="#i-pin"/></svg></span><i class="dot"></i><b>Башмаки</b><small>закрепление поезда на перегоне</small></button>
+        <button class="card tile" style="--c:var(--violet)" onclick="go('quiz')"><span class="badge"><svg><use href="#i-q"/></svg></span><i class="dot"></i><b>Билеты</b><small id="tileQuiz">нестандартные ситуации</small></button>
+        <button class="card tile" style="--c:var(--green)" onclick="go('dates')"><span class="badge"><svg><use href="#i-bell"/></svg></span><i class="dot"></i><b>Сроки</b><small id="tileDates">медкомиссия, экзамены, допуски</small></button>
+        <button class="card tile" style="--c:var(--blue)" onclick="go('more')"><span class="badge"><svg><use href="#i-more"/></svg></span><i class="dot"></i><b>Настройки</b><small>тема, шрифт, работа без сети</small></button>
       </div>
 
-      <h2>Календарь отпуска <a onclick="vacClear()">очистить</a></h2>
-      <div class="card vac sum">
-        <div class="mon"><button onclick="vacMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
-          <b id="vacName"></b><button onclick="vacMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
-        <div class="cal" id="vacGrid"></div>
-        <div id="vacOut"></div>
-      </div>
-      <p class="note">Нерабочие праздничные дни, попавшие в отпуск, в число дней отпуска не входят (статья 120 Трудового кодекса). Переносы выходных по производственному календарю не учитываются.</p>
+      <details class="fold" data-fold="vac">
+        <summary>Календарь отпуска <span id="vacSum"></span><svg><use href="#i-chev"/></svg></summary>
+        <div class="card vac sum">
+          <div class="mon"><button onclick="vacMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
+            <b id="vacName"></b><button onclick="vacMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
+          <div class="cal" id="vacGrid"></div>
+          <div id="vacOut"></div>
+        </div>
+        <p class="note">Нерабочие праздничные дни, попавшие в отпуск, в число дней отпуска не входят (статья 120 Трудового кодекса). Переносы выходных по производственному календарю не учитываются.</p>
+      </details>
     </div>
   </section>
 
@@ -270,13 +330,29 @@ a.item{color:inherit;text-decoration:none}
 
     <h2>Поездки за месяц</h2>
     <div id="trips"></div>
+
+    <details class="fold" data-fold="pay">
+      <summary>Оценка зарплаты <span id="paySum"></span><svg><use href="#i-chev"/></svg></summary>
+      <div class="card form">
+        <div class="two keep">
+          <label>Часовая ставка, ₽<input class="inp" id="payRate" inputmode="decimal" placeholder="например, 250" oninput="paySet('rate',this.value)"></label>
+          <label>Премия, %<input class="inp" id="payBonus" inputmode="decimal" placeholder="0" oninput="paySet('bonus',this.value)"></label>
+        </div>
+        <div class="two keep">
+          <label>Ночные, % к ставке<input class="inp" id="payNight" inputmode="decimal" placeholder="40" oninput="paySet('night',this.value)"></label>
+          <label>Районный коэф. и надбавки, %<input class="inp" id="payRegion" inputmode="decimal" placeholder="0" oninput="paySet('region',this.value)"></label>
+        </div>
+      </div>
+      <div class="card" id="payOut" style="margin-top:12px;overflow:hidden"></div>
+      <p class="note">Это оценка по записанным поездкам, а не расчётный листок. Тариф - ставка × часы. Ночные - доплата к ставке за часы с 22:00 до 06:00. Праздничные часы оплачиваются в двойном размере. Сверхурочные - часы сверх нормы месяца (без праздничных): первые два в полуторном размере, остальные в двойном. Премия считается от тарифа, районный коэффициент и надбавки - от всей суммы, НДФЛ - 13 %. В депо учётный период, доплаты и премия считаются по своим правилам - сверяйте с расчётным листком.</p>
+    </details>
     <p class="note">Поездки хранятся только в этом браузере на этом устройстве. Расчёт по приказу Минтранса № 339: отдых дома = рабочее время × 2,6 − отдых в пункте оборота, не меньше 16 часов. Ночные часы - с 22:00 до 06:00. В вашем депо могут действовать свои нормы - сверяйте с маршрутом и табелем.</p>
   </section>
 
   <!-- Калькулятор: отдых в бригаднике, справка ВУ-45 -->
   <section class="view" id="v-calc">
     <h1>Калькулятор</h1><p class="sub" id="calcSub"></p>
-    <div class="seg"><button id="cm-rest" onclick="calcMode('rest')">Бригадник</button><button id="cm-vu" onclick="calcMode('vu')">ВУ-45</button></div>
+    <div class="seg"><button id="cm-rest" onclick="calcMode('rest')">Бригадник</button><button id="cm-vu" onclick="calcMode('vu')">ВУ-45</button><button id="cm-shoe" onclick="calcMode('shoe')">Башмаки</button></div>
 
     <div id="c-rest">
       <div class="card form">
@@ -294,6 +370,19 @@ a.item{color:inherit;text-decoration:none}
       <h2>Итог <a onclick="crClear()">очистить</a></h2>
       <div id="crOut"></div>
       <p class="note">По приказу Минтранса № 339 отдых в пункте оборота - не меньше половины отработанного до него времени; половину от нечётного числа минут округляю вверх. В вашем депо могут действовать свои нормы - сверяйте с дежурным по депо и маршрутом.</p>
+    </div>
+
+    <div id="c-shoe">
+      <div class="card form">
+        <div class="two keep">
+          <label>Вес поезда, тс<input class="inp" id="shW" inputmode="decimal" placeholder="например, 4200" oninput="shSet('w',this.value)"></label>
+          <label>Уклон, тысячных<input class="inp" id="shI" inputmode="decimal" placeholder="например, 9" oninput="shSet('i',this.value)"></label>
+        </div>
+        <label>Состав<select class="inp" id="shKind" onchange="shSet('kind',this.value)"><option value="g">гружёный</option><option value="p">порожний</option></select></label>
+      </div>
+      <h2>Итог</h2>
+      <div id="shOut"></div>
+      <p class="note">По «Порядку определения потребного количества тормозных башмаков для закрепления поезда на перегоне» (есть в документах, раздел «Тормоза»): тормозные оси = вес поезда / 100 × коэффициент уклона; в гружёном поезде один башмак заменяет 3 оси, в порожнем - 1 ось. Коэффициенты для порожнего поезда на уклонах до 7 тысячных (0,4 и 0,5) взяты из таблицы этого документа. Результат округляю вверх; в двух строках таблицы (4600 и 5600 тс, уклон до 8) напечатано на один башмак меньше. Сверяйте с таблицей и местной инструкцией.</p>
     </div>
 
     <div id="c-vu">
@@ -335,6 +424,48 @@ a.item{color:inherit;text-decoration:none}
     <div id="docs"></div>
     <p class="note">Неофициальный справочник. Сверяйте с действующей редакцией документов и местными инструкциями.</p>
   </section>
+
+  <!-- Сроки -->
+  <section class="view" id="v-dates">
+    <h1>Сроки</h1><p class="sub">Медкомиссия, экзамены, допуски - сколько осталось до каждой даты.</p>
+    <form class="card form" onsubmit="event.preventDefault();dateAdd()">
+      <label>Что истекает<input class="inp" id="dName" list="dNames" autocomplete="off" placeholder="например, медицинская комиссия"></label>
+      <datalist id="dNames"><option value="Медицинская комиссия"><option value="Психофизиологическое обследование"><option value="Проверка знаний ПТЭ"><option value="Заключение машиниста-инструктора"><option value="Проверка знаний по охране труда"><option value="Группа по электробезопасности"></datalist>
+      <label>Действует до<input type="date" id="dDate"></label>
+      <div class="err" id="dErr"></div>
+      <button class="btn">Добавить</button>
+    </form>
+    <h2>Мои сроки</h2>
+    <div id="dates"></div>
+    <p class="note">Сроки хранятся только в этом браузере на этом устройстве. Напоминаний сайт не присылает - заглядывайте сюда сами.</p>
+  </section>
+
+  <!-- Билеты -->
+  <section class="view" id="v-quiz">
+    <h1>Билеты</h1><p class="sub" id="quizSub">Действия в нестандартных ситуациях: грузовое движение, электротяга.</p>
+    <div class="mon"><button onclick="quizStep(-1)" aria-label="Предыдущий билет"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
+      <b id="quizName"></b><button onclick="quizStep(1)" aria-label="Следующий билет"><svg><use href="#i-chev"/></svg></button></div>
+    <div id="quiz"></div>
+    <button class="morebtn" onclick="quizRandom()">Случайный билет</button>
+    <p class="note">В файле билетов есть только вопросы, готовых ответов в нём нет. «Найти в документах» ищет вопрос по загруженным документам. Отметки «Знаю» хранятся в этом браузере.</p>
+  </section>
+
+  <!-- Настройки -->
+  <section class="view" id="v-more">
+    <h1>Настройки</h1><p class="sub">Вид страницы и работа без интернета.</p>
+    <div class="card list" id="uiList"></div>
+    <h2>Без интернета</h2>
+    <div class="card form">
+      <div class="pre" id="offText"></div>
+      <button class="btn" id="offBtn" onclick="offlineAll()">Скачать всё для работы без сети</button>
+    </div>
+    <p class="note">Чтобы сайт открывался как приложение со значком: в Safari на iPhone - «Поделиться» → «На экран Домой»; в Chrome на Android - меню → «Установить приложение» или «Добавить на главный экран».</p>
+    <h2>Ещё</h2>
+    <div class="card list">
+      <button class="item" onclick="go('quiz')"><span class="badge" style="--c:var(--violet)"><svg><use href="#i-q"/></svg></span><span><b>Билеты</b><small>нестандартные ситуации</small></span><span class="go"><svg><use href="#i-chev"/></svg></span></button>
+      <button class="item" onclick="go('dates')"><span class="badge" style="--c:var(--green)"><svg><use href="#i-bell"/></svg></span><span><b>Сроки</b><small>медкомиссия, экзамены, допуски</small></span><span class="go"><svg><use href="#i-chev"/></svg></span></button>
+    </div>
+  </section>
 </main>
 
 <nav><div class="wrap">
@@ -342,6 +473,7 @@ a.item{color:inherit;text-decoration:none}
   <button data-v="hours" onclick="go('hours')"><svg><use href="#i-clock"/></svg>Часы</button>
   <button data-v="calc" onclick="go('calc')"><svg><use href="#i-calc"/></svg>Расчёты</button>
   <button data-v="docs" onclick="go('docs')"><svg><use href="#i-doc"/></svg>Документы</button>
+  <button data-v="more" onclick="go('more')"><svg><use href="#i-more"/></svg>Ещё</button>
 </div></nav>
 
 <script>
@@ -349,13 +481,17 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s || '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const ic = n => `<svg><use href="#i-${n}"/></svg>`;
 
+const NAV = {quiz: 'more', dates: 'more'};   // страницы без своей кнопки в нижнем меню
 function go(view, arg) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === (NAV[view] || view)));
   window.scrollTo(0, 0);
   if (view === 'hours') loadHours();
   if (view === 'calc') calcMode(arg);
   if (view === 'docs') renderDocs();
+  if (view === 'dates') renderDates();
+  if (view === 'quiz') quizLoad();
+  if (view === 'more') renderMore();
 }
 
 // ---- учёт часов
@@ -395,6 +531,7 @@ function renderHours(r) {
       ${x.warn.map(w => `<small class="w">${esc(w)}</small>`).join('')}</div>
       <button class="x" onclick="delShift(${x.id})" aria-label="Удалить поездку">✕</button></div>`).join('') + `</div>`
     : `<div class="card empty">В этом месяце поездок пока нет.</div>`;
+  payRender(r);
   if (r.ym === (d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}`)(new Date())) $('tileHours').textContent = `${hm(r.work)} из ${+r.norm} ч`;
 }
 function toggleRest() {
@@ -433,7 +570,8 @@ function setNorm() {
 
 // ---- калькулятор: режимы
 const CALC_SUB = {rest: 'Сколько отдыхать в пункте оборота и когда поднимут на явку.',
-  vu: 'Посчитаю требуемое и фактическое нажатие колодок и ручные тормоза.'};
+  vu: 'Посчитаю требуемое и фактическое нажатие колодок и ручные тормоза.',
+  shoe: 'Сколько тормозных башмаков нужно, чтобы закрепить поезд на перегоне.'};
 const load = (key, def) => { try { return Object.assign(def, JSON.parse(localStorage.getItem(key) || '{}')); } catch (e) { return def; } };
 const save = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} };
 const clock = v => /^\d\d:\d\d/.test(v || '') ? +v.slice(0, 2) * 60 + +v.slice(3, 5) : null;
@@ -447,7 +585,7 @@ function calcMode(m) {
   if (CALC_SUB[m]) { CM = m; save('calcMode', {m}); }
   Object.keys(CALC_SUB).forEach(k => { $('cm-' + k).classList.toggle('on', k === CM); $('c-' + k).style.display = k === CM ? '' : 'none'; });
   $('calcSub').textContent = CALC_SUB[CM];
-  ({rest: crRender, vu: vuRender})[CM]();
+  ({rest: crRender, vu: vuRender, shoe: shRender})[CM]();
 }
 
 // отдых в бригаднике (пункте оборота): время - часы на стене, переход через полночь учитывается сам
@@ -598,6 +736,13 @@ function night(a, b, lo, hi) {   // ночные минуты (22:00-06:00) от
   for (; day < b; day += 1440) total += clip(a, b, day + 1320, day + 1800);
   return total;
 }
+function holiday(a, b, lo, hi) {   // минуты отрезка [a, b] в пределах [lo, hi], попавшие на нерабочие праздничные дни
+  let total = 0;
+  a = Math.max(a, lo); b = Math.min(b, hi);
+  for (let day = Math.floor(a / 1440) * 1440; day < b; day += 1440)
+    if (HOLIDAYS.includes(new Date(day * 60000).toISOString().slice(5, 10))) total += clip(a, b, day, day + 1440);
+  return total;
+}
 const bounds = ym => [Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1) / 60000, Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 1) / 60000];
 function defaultNorm(ym) {
   if (NORMS[ym]) return NORMS[ym];
@@ -615,14 +760,14 @@ function tripCalc(x, lo = -Infinity, hi = Infinity) {   // lo/hi - границ�
   if (rest && rest < (segs[0][1] - segs[0][0]) / 2) warn.push('Отдых в пункте оборота меньше половины работы до него');
   return Object.assign({}, x, {work, rest, home, warn, night: sum((p, q) => night(p, q, -Infinity, Infinity)),
     next: new Date((b + home) * 60000).toISOString().slice(0, 16),
-    month_work: sum((p, q) => clip(p, q, lo, hi)), month_night: sum((p, q) => night(p, q, lo, hi))});
+    month_work: sum((p, q) => clip(p, q, lo, hi)), month_night: sum((p, q) => night(p, q, lo, hi)), month_hol: sum((p, q) => holiday(p, q, lo, hi))});
 }
 function hoursData(ym) {
   const [lo, hi] = bounds(ym), own = HRS.norms[ym];
   const items = HRS.shifts.filter(x => tm(x.start) < hi && tm(x.end) > lo).sort((p, q) => p.start < q.start ? -1 : 1).map(x => tripCalc(x, lo, hi));
   const last = HRS.shifts.reduce((m, x) => !m || x.end > m.end ? x : m, null);
   return {ym, norm: own != null ? own : defaultNorm(ym), norm_own: own != null, items, last: last && tripCalc(last),
-    work: items.reduce((s, i) => s + i.month_work, 0), night: items.reduce((s, i) => s + i.month_night, 0)};
+    work: items.reduce((s, i) => s + i.month_work, 0), night: items.reduce((s, i) => s + i.month_night, 0), hol: items.reduce((s, i) => s + i.month_hol, 0)};
 }
 function tripError(x) {   // текст ошибки или пустая строка
   const ok = s => /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(s);
@@ -634,6 +779,141 @@ function tripError(x) {   // текст ошибки или пустая стр�
     return 'Отдых в пункте оборота должен быть внутри поездки: явка - начало отдыха - конец отдыха - окончание.';
   if (HRS.shifts.some(s => tm(s.start) < b && tm(s.end) > a)) return 'На это время уже записана другая поездка.';
   return '';
+}
+
+// ---- оценка зарплаты за месяц по записанным поездкам
+const PAY = load('pay', {rate: '', bonus: '', night: '40', region: ''});
+const money = x => Math.round(x).toLocaleString('ru-RU') + ' ₽';
+const kvRow = (k, v) => `<div class="kv"><span>${k}</span><b>${v}</b></div>`;
+let PAYR = null;
+function paySet(key, value) { PAY[key] = value; save('pay', PAY); payCalc(); }
+function payRender(r) {
+  PAYR = r;
+  $('payRate').value = PAY.rate; $('payBonus').value = PAY.bonus; $('payNight').value = PAY.night; $('payRegion').value = PAY.region;
+  payCalc();
+}
+function payCalc() {
+  const r = PAYR, rate = num(PAY.rate);
+  if (!r || !rate) { $('payOut').innerHTML = `<div class="empty">Укажите часовую ставку - посчитаю месяц по записанным поездкам.</div>`; $('paySum').textContent = ''; return; }
+  const h = r.work / 60, hol = r.hol / 60, over = Math.max(0, h - r.norm - hol);
+  const base = rate * h, nightPay = rate * r.night / 60 * num(PAY.night) / 100, holPay = rate * hol;
+  const overPay = rate * (Math.min(over, 2) * .5 + Math.max(0, over - 2)), bonus = base * num(PAY.bonus) / 100;
+  const sum = base + nightPay + holPay + overPay + bonus, region = sum * num(PAY.region) / 100, gross = sum + region, tax = gross * .13;
+  $('payOut').innerHTML = kvRow(`Тариф: ${ru(h)} ч × ${ru(rate, 2)} ₽`, money(base)) + kvRow(`Ночные: ${ru(r.night / 60)} ч`, money(nightPay)) +
+    (hol ? kvRow(`Праздничные: ${ru(hol)} ч, доплата`, money(holPay)) : '') + (over ? kvRow(`Сверхурочные: ${ru(over)} ч, доплата`, money(overPay)) : '') +
+    (bonus ? kvRow('Премия', money(bonus)) : '') + (region ? kvRow('Районный коэффициент и надбавки', money(region)) : '') +
+    kvRow('Начислено', money(gross)) + kvRow('НДФЛ 13 %', '− ' + money(tax)) + kvRow('<b style="color:var(--text)">На руки</b>', money(gross - tax));
+  $('paySum').textContent = `· около ${money(gross - tax)}`;
+}
+
+// ---- тормозные башмаки для закрепления поезда на перегоне
+const SH = load('calcShoe', {w: '', i: '', kind: 'g'});
+function shSet(key, value) { SH[key] = value; save('calcShoe', SH); shCalc(); }
+function shRender() { $('shW').value = SH.w; $('shI').value = SH.i; $('shKind').value = SH.kind; shCalc(); }
+function shCalc() {
+  const w = num(SH.w), i = Math.ceil(num(SH.i) - 1e-9), empty = SH.kind === 'p';
+  if (!w || String(SH.i).trim() === '') { $('shOut').innerHTML = `<div class="card empty">Укажите вес поезда и уклон.</div>`; return; }
+  if (i > 20) { $('shOut').innerHTML = `<div class="card empty">Коэффициенты в документе даны для уклонов до 20 тысячных. Круче - по указанию владельца инфраструктуры.</div>`; return; }
+  const k = empty && i <= 6 ? .4 : empty && i === 7 ? .5 : i <= 8 ? .6 : (i - 2) / 10;
+  const axles = Math.round(w * k * 10) / 1000, shoes = up(empty ? axles : axles / 3);
+  $('shOut').innerHTML = `<div class="card sum"><div class="big">${shoes} ${plural(shoes, 'башмак', 'башмака', 'башмаков')} <small>${ru(w)} тс / 100 × ${ru(k)} = ${ru(axles, 2)} тормозных осей</small></div>
+    <div class="stats" style="margin-top:14px"><div><small>Уклон</small><b>${i} ‰</b></div><div><small>Коэффициент</small><b>${ru(k)}</b></div>
+      <div><small>1 башмак</small><b>${empty ? '1 ось' : '3 оси'}</b></div></div></div>`;
+}
+
+// ---- сроки: медкомиссия, экзамены, допуски
+const DL = load('deadlines', {items: [], seq: 0});
+const daysLeft = s => Math.round((utc(s) - utc(iso(new Date()))) / 864e5);
+const dueText = n => n < 0 ? `просрочено на ${-n} ${plural(-n, 'день', 'дня', 'дней')}` : n === 0 ? 'истекает сегодня' : `${plural(n, 'остался', 'осталось', 'осталось')} ${n} ${plural(n, 'день', 'дня', 'дней')}`;
+const dueCls = n => n < 0 ? 'late' : n <= 30 ? 'soon' : 'ok';
+function dateAdd() {
+  const name = $('dName').value.trim(), date = $('dDate').value;
+  if (!name || !/^\d{4}-\d\d-\d\d$/.test(date)) { $('dErr').textContent = 'Укажите название и дату.'; return; }
+  DL.items.push({id: ++DL.seq, name, date}); save('deadlines', DL);
+  $('dName').value = $('dDate').value = $('dErr').textContent = '';
+  renderDates();
+}
+function dateDel(id) {
+  if (!confirm('Удалить срок?')) return;
+  DL.items = DL.items.filter(x => x.id !== id); save('deadlines', DL); renderDates();
+}
+function renderDates() {
+  const d = DL.items.slice().sort((a, b) => a.date < b.date ? -1 : 1), color = {late: 'red', soon: 'amber', ok: 'green'};
+  $('dates').innerHTML = d.length ? `<div class="card list">` + d.map(x => { const n = daysLeft(x.date), c = dueCls(n); return `<div class="item">
+    <span class="badge" style="--c:var(--${color[c]})">${ic('bell')}</span><span><b>${esc(x.name)}</b><small>до ${dmy(x.date)} · <span class="due ${c}">${dueText(n)}</span></small></span>
+    <button class="xbtn" onclick="dateDel(${x.id})" aria-label="Удалить срок">✕</button></div>`; }).join('') + `</div>` : `<div class="card empty">Сроков пока нет.</div>`;
+  $('tileDates').textContent = d.length ? `${d[0].name}: ${dueText(daysLeft(d[0].date))}` : 'медкомиссия, экзамены, допуски';
+}
+
+// ---- билеты: вопросы по нестандартным ситуациям, отметки «знаю»
+const QZ = load('quiz', {n: 0, done: {}});
+let TICKETS = null;
+async function quizLoad() {
+  if (!TICKETS) {
+    $('quiz').innerHTML = '<div class="sk" style="height:110px;margin-bottom:10px"></div><div class="sk" style="height:110px"></div>';
+    try { TICKETS = (await (await fetch('tickets.json')).json()).tickets; }
+    catch (e) { $('quiz').innerHTML = `<div class="card empty">Билеты не загрузились. Проверьте связь и откройте раздел ещё раз.</div>`; return; }
+  }
+  quizRender();
+}
+function quizStep(k) { if (!TICKETS) return; QZ.n = (QZ.n + k + TICKETS.length) % TICKETS.length; save('quiz', QZ); quizRender(); window.scrollTo(0, 0); }
+function quizRandom() {   // сначала билеты, где ещё есть невыученные вопросы
+  if (!TICKETS) return;
+  const open = TICKETS.map((t, i) => i).filter(i => i !== QZ.n && TICKETS[i].q.some((q, j) => !QZ.done[`${TICKETS[i].n}.${j + 1}`]));
+  const pool = open.length ? open : TICKETS.map((t, i) => i).filter(i => i !== QZ.n);
+  quizStep(pool[Math.floor(Math.random() * pool.length)] - QZ.n);
+}
+function quizMark(key) { if (QZ.done[key]) delete QZ.done[key]; else QZ.done[key] = 1; save('quiz', QZ); quizRender(); }
+function quizRender() {
+  const t = TICKETS[QZ.n] || TICKETS[QZ.n = 0], total = TICKETS.reduce((s, x) => s + x.q.length, 0), known = Object.keys(QZ.done).length;
+  $('quizName').textContent = `Билет № ${t.n}`;
+  $('quizSub').textContent = `Действия в нестандартных ситуациях: грузовое движение, электротяга. Отмечено «знаю»: ${known} из ${total}.`;
+  $('quiz').innerHTML = t.q.map((q, i) => { const key = `${t.n}.${i + 1}`; return `<div class="card qz"><p><b>${i + 1}.</b> ${esc(q)}</p>
+    <div class="row2"><button onclick="quizMark('${key}')"><span class="sw ${QZ.done[key] ? 'on' : ''}"></span>Знаю</button>
+      <button class="linkbtn" data-q="${esc(q)}" onclick="go('home');find(this.dataset.q)">Найти в документах</button></div></div>`; }).join('');
+  quizTile();
+}
+function quizTile() { const n = Object.keys(QZ.done).length; $('tileQuiz').textContent = n ? `отмечено «знаю»: ${n}` : 'нестандартные ситуации'; }
+
+// ---- настройки: светлая тема, крупный шрифт, работа без сети
+const UI = load('ui', {light: false, big: false, offline: ''});   // offline - сборка сайта, скачанная для работы без сети
+function uiApply() {
+  document.documentElement.classList.toggle('light', !!UI.light); document.documentElement.classList.toggle('big', !!UI.big);
+  document.querySelector('meta[name=theme-color]').content = UI.light ? '#f4f5f7' : '#0d0f13';
+}
+uiApply();
+function uiSet(key) { UI[key] = !UI[key]; save('ui', UI); uiApply(); renderMore(); }
+const mb = b => (b / 1048576).toFixed(1).replace('.', ',') + ' МБ';
+function renderMore(text) {
+  $('uiList').innerHTML = [['light', 'Светлая тема', 'для чтения на солнце', 'sun'], ['big', 'Крупный шрифт', 'всё на странице крупнее', 'doc']].map(([k, t, sub, i]) =>
+    `<button class="item" onclick="uiSet('${k}')"><span class="badge" style="--c:var(--amber)">${ic(i)}</span><span><b>${t}</b><small>${sub}</small></span><span class="sw ${UI[k] ? 'on' : ''}"></span></button>`).join('');
+  const sw = 'serviceWorker' in navigator, ready = META && UI.offline === META.v;
+  $('offBtn').style.display = sw && META ? '' : 'none';
+  $('offBtn').disabled = OFFRUN;
+  $('offBtn').textContent = ready ? 'Скачать заново' : 'Скачать всё для работы без сети';
+  $('offText').textContent = text || (!sw ? 'Этот браузер не умеет хранить сайт для работы без сети.' : !META ? 'Список документов не загрузился.'
+    : ready ? `Всё скачано (${mb(META.bytes)}): поиск, документы и расчёты работают без интернета.`
+    : `Страница и расчёты открываются без сети сами. Чтобы без сети работали поиск и документы, их нужно скачать: ${mb(META.bytes)}.`);
+}
+let OFFRUN = false;
+async function offlineAll() {   // прогоняем все файлы через обработчик sw.js - он складывает их в память телефона
+  if (OFFRUN || !META || !('serviceWorker' in navigator)) return;
+  OFFRUN = true; renderMore('Готовлю…');
+  try { await navigator.serviceWorker.ready; } catch (e) {}
+  for (let i = 0; i < 20 && !navigator.serviceWorker.controller; i++) await new Promise(r => setTimeout(r, 150));
+  if (!navigator.serviceWorker.controller) { OFFRUN = false; return renderMore('Хранилище ещё не включилось. Обновите страницу и повторите.'); }
+  const urls = [];
+  for (let k = 0; k < META.shards; k++) urls.push(`data/i/${k}.json?v=${META.v}`);
+  for (let k = 0; k * META.per < META.chunks; k++) urls.push(`data/t/${k}.json?v=${META.v}`);
+  urls.push(`data/vocab.json?v=${META.v}`, 'tickets.json', ...META.docs.map(d => fileUrl(d)));
+  let done = 0, bad = 0;
+  for (const u of urls) {
+    try { const r = await fetch(u); if (r.ok) await r.arrayBuffer(); else bad++; } catch (e) { bad++; }
+    renderMore(`Скачиваю: ${++done} из ${urls.length}…`);
+  }
+  OFFRUN = false;
+  if (!bad) { UI.offline = META.v; save('ui', UI); navigator.serviceWorker.controller.postMessage({keep: META.v}); }
+  renderMore(bad ? `Не скачалось файлов: ${bad}. Проверьте связь и повторите.` : '');
 }
 
 // ---- календарь отпуска: первое нажатие - первый день, второе - последний
@@ -652,7 +932,7 @@ function vacClear() { VAC.a = VAC.b = ''; save('vacation', VAC); vacRender(); }
 function vacRender() {
   const y = +VM.slice(0, 4), m = +VM.slice(5, 7) - 1, first = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate(), now = iso(new Date());
   const {a, b} = VAC;
-  $('vacName').textContent = `${MONTHS[m]} ${y}`;
+  $('vacName').textContent = `${MONTHS[m]} ${y}`; $('vacSum').textContent = '';
   let h = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(w => `<i>${w}</i>`).join('') + '<span></span>'.repeat(first);
   for (let d = 1; d <= n; d++) {
     const s = `${VM}-${p2(d)}`, cls = [(first + d - 1) % 7 > 4 && 'we', HOLIDAYS.includes(s.slice(5)) && 'hol', s === now && 'now',
@@ -668,7 +948,9 @@ function vacRender() {
   const back = new Date(utc(b) + 864e5).toISOString().slice(0, 10), word = k => plural(k, 'день', 'дня', 'дней');
   $('vacOut').innerHTML = `<div class="big">${days} ${word(days)} <small>с ${dmy(a)} по ${dmy(b)}</small></div>
     <div class="stats" style="margin-top:14px"><div><small>Праздничных</small><b>${hol}</b></div><div><small>В счёт отпуска</small><b>${days - hol} ${word(days - hol)}</b></div>
-      <div><small>Выход</small><b>${dmy(back).slice(0, 5)}</b></div></div>`;
+      <div><small>Выход</small><b>${dmy(back).slice(0, 5)}</b></div></div>
+    <button class="linkbtn" style="margin-top:14px" onclick="vacClear()">Очистить даты</button>`;
+  $('vacSum').textContent = `· ${days} ${word(days)}`;
 }
 
 // ---- слова и их основы. Стеммер и разбор слов повторяют build.py - они должны совпадать буква в букву.
@@ -713,7 +995,7 @@ function fnv(s) {   // номер файла индекса по слову
 
 // ---- поиск по документам: индекс собран заранее (build.py), всё считается в браузере
 const BUILD = '__BUILD__';   // номер сборки, подставляет build.py
-let META = null, RUN = 0, HITS = [], SHOWN = 0, MARKS = new Set();
+let META = null, RUN = 0, HITS = [], SHOWN = 0, MARKS = new Set(), SEC = '';   // SEC - раздел, которым ограничен поиск
 const FILES = {}, ROWS = {};
 function data(path) {   // файл индекса: скачивается один раз
   return FILES[path] || (FILES[path] = fetch(`data/${path}?v=${META.v}`).then(r => { if (!r.ok) throw new Error(path); return r.json(); })
@@ -742,7 +1024,7 @@ async function near(s) {   // опечатка: самое частое из п�
   return bd <= lim ? best : null;
 }
 const plural = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? b : c;
-const fileUrl = (doc, page) => `files/${encodeURIComponent(doc.file)}` + (page && /\.pdf$/i.test(doc.file) ? `#page=${page}` : '');
+const fileUrl = (doc, page) => `files/${doc.file.split('/').map(encodeURIComponent).join('/')}` + (page && /\.pdf$/i.test(doc.file) ? `#page=${page}` : '');
 const docItem = (x, sub) => `<a class="item" href="${fileUrl(x)}" target="_blank" rel="noopener"><span class="badge" style="--c:var(--cyan)">${ic('doc')}</span>
   <span><b>${esc(x.name)}</b><small>${esc(sub)}</small></span><span class="go">${ic('chev')}</span></a>`;
 
@@ -751,7 +1033,7 @@ async function find(text) {
   const my = ++RUN, say = t => { if (my === RUN) $('found').innerHTML = `<div class="count"><span>${t}</span><a onclick="find('')">сбросить</a></div>`; };
   try { history.replaceState(null, '', text ? '#q=' + encodeURIComponent(text) : location.pathname); } catch (e) {}
   $('sections').style.display = text ? 'none' : '';
-  if (!text) { $('found').innerHTML = ''; return; }
+  if (!text) { $('found').innerHTML = ''; SEC = ''; return; }
   if (!META) return say('Список документов не загрузился. Обновите страницу.');
   const first = Object.create(null);   // основа -> слово, как его набрали
   (low(text).match(/[a-zа-я0-9]+/g) || []).filter(keep).forEach(w => { const s = stem(w); if (!first[s]) first[s] = w; });
@@ -771,16 +1053,25 @@ async function find(text) {
   const acc = new Map();   // фрагмент -> [сколько слов запроса в нём есть, вес]
   got.forEach(({l}) => { for (let i = 0; i < l.length; i += 2) { const e = acc.get(l[i]); if (e) { e[0]++; e[1] += l[i + 1]; } else acc.set(l[i], [1, l[i + 1]]); } });
   // сначала фрагменты, где есть все слова; если таких нет - где больше слов запроса
-  let rows = [...acc], all = rows.filter(r => r[1][0] === got.length);
+  let rows = [...acc];
+  if (SEC) {   // фрагменты одного документа идут подряд: start - первый, chunks - сколько
+    const spans = META.docs.filter(d => d.sec === SEC).map(d => [d.start, d.start + d.chunks]);
+    rows = rows.filter(r => spans.some(([a, b]) => r[0] >= a && r[0] < b));
+  }
+  const all = rows.filter(r => r[1][0] === got.length);
   const whole = all.length > 0;
   rows = (whole ? all : rows).sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1]);
   HITS = rows.slice(0, 200).map(r => r[0]); SHOWN = 0; MARKS = new Set(got.map(x => x.s));
-  const names = META.docs.filter(d => stems.every(s => d.stems.has(s)));
-  const n = rows.length, head = !n ? 'В тексте документов таких слов нет.'
+  const names = META.docs.filter(d => (!SEC || d.sec === SEC) && stems.every(s => d.stems.has(s)));
+  const secs = [...new Set(META.docs.map(d => d.sec).filter(Boolean))];
+  const secChips = secs.length > 1 ? `<div class="chips" style="margin-top:0;margin-bottom:10px">` + ['', ...secs].map(x =>
+    `<button class="chip ${x === SEC ? 'on' : ''}" data-s="${esc(x)}" onclick="setSec(this.dataset.s)">${esc(x || 'Все разделы')}</button>`).join('') + `</div>` : '';
+  if (rows.length) remember(text);
+  const n = rows.length, head = !n ? (SEC ? `В разделе «${esc(SEC)}» ничего не найдено.` : 'В тексте документов таких слов нет.')
     : (whole ? `${n} ${plural(n, 'фрагмент', 'фрагмента', 'фрагментов')}` + (got.length > 1 ? (lost.length ? ' с остальными словами' : ' со всеми словами') : '')
       : 'Все слова вместе не встречаются - показаны фрагменты с частью слов') + (n > 200 ? ', показаны первые 200.' : '.');
   $('found').innerHTML = `<div class="count"><span>${head}${n && lost.length ? ` Нет в документах: ${lost.join(', ')}.` : ''}` +
-    `${fixed.length ? ` Похоже на опечатку: ${fixed.join(', ')} - искал близкое слово.` : ''}</span><a onclick="find('')">сбросить</a></div>` +
+    `${fixed.length ? ` Похоже на опечатку: ${fixed.join(', ')} - искал близкое слово.` : ''}</span><a onclick="find('')">сбросить</a></div>` + secChips +
     (names.length ? `<div class="card list" style="margin-bottom:10px">${names.map(d => docItem(d, 'документ целиком')).join('')}</div>` : '') +
     `<div id="hits"></div><button class="morebtn" id="moreBtn" style="display:none" onclick="showMore()">Показать ещё</button>`;
   showMore();
@@ -819,24 +1110,63 @@ function windowOf(text) {   // кусок примерно в 300 знаков, 
 function hitCard(id, row) {
   const [d, label, text] = ROWS[id] = row, doc = META.docs[d], [from, to] = windowOf(text), page = /^стр\. (\d+)$/.exec(label);
   const cut = from > 0 || to < text.length;
-  return `<div class="card hit"><div class="src">${ic('doc')}<span>${esc(doc.name)}</span></div>
+  return `<div class="card hit"><div class="src">${ic('doc')}<span>${esc(doc.name)}</span>
+    <button class="star ${BM.items.some(x => x.k === markKey(doc, row)) ? 'on' : ''}" onclick="toggleMark(${id},this)" aria-label="В закладки">${ic('star')}</button></div>
     <div class="tx ${cut ? 'cut' : ''}" ${cut ? `onclick="fullHit(this,${id})" title="Показать фрагмент целиком"` : ''}>${from ? '…' : ''}${marked(text, from, to)}${to < text.length ? '…' : ''}</div>
     <div class="at"><span>${esc(label)}</span><a href="${fileUrl(doc, page && page[1])}" target="_blank" rel="noopener">${page ? 'Открыть страницу' : 'Открыть документ'}</a></div></div>`;
 }
 function fullHit(el, id) { el.innerHTML = marked(ROWS[id][2], 0, ROWS[id][2].length); el.classList.remove('cut'); el.onclick = null; el.title = ''; }
 
+function setSec(x) { SEC = x; find($('q').value); }
+
+// недавние запросы
+const REC = load('recent', {q: []});
+function remember(text) { REC.q = [text, ...REC.q.filter(x => x.toLowerCase() !== text.toLowerCase())].slice(0, 8); save('recent', REC); renderRecent(); }
+function forget() { REC.q = []; save('recent', REC); renderRecent(); }
+function renderRecent() {
+  $('recent').innerHTML = REC.q.map(x => `<button class="chip" onclick="find(this.textContent)">${esc(x)}</button>`).join('') +
+    (REC.q.length ? `<button class="chip dim" onclick="forget()">очистить</button>` : '');
+}
+
+// закладки: найденный фрагмент целиком хранится в браузере, поэтому переживает пересборку сайта
+const BM = load('bookmarks', {items: []});
+const markKey = (doc, row) => `${doc.file}|${row[1]}|${row[2].slice(0, 80)}`;
+function toggleMark(id, el) {
+  const row = ROWS[id], doc = META.docs[row[0]], k = markKey(doc, row), i = BM.items.findIndex(x => x.k === k);
+  if (i >= 0) BM.items.splice(i, 1); else BM.items.unshift({k, file: doc.file, name: doc.name, label: row[1], text: row[2]});
+  save('bookmarks', BM); el.classList.toggle('on', i < 0); renderMarks();
+}
+function dropMark(i) { BM.items.splice(i, 1); save('bookmarks', BM); renderMarks(); }
+function renderMarks() {
+  $('marksBox').style.display = BM.items.length ? '' : 'none';
+  $('marksN').textContent = BM.items.length ? `· ${BM.items.length}` : '';
+  $('marks').innerHTML = BM.items.map((x, i) => {
+    const page = /^стр\. (\d+)$/.exec(x.label), cut = x.text.length > 320;
+    return `<div class="card hit"><div class="src">${ic('doc')}<span>${esc(x.name)}</span>
+      <button class="star on" onclick="dropMark(${i})" aria-label="Убрать из закладок">${ic('star')}</button></div>
+      <div class="tx ${cut ? 'cut' : ''}" ${cut ? `onclick="this.textContent=BM.items[${i}].text;this.classList.remove('cut');this.onclick=null"` : ''}>${esc(cut ? x.text.slice(0, 300) + '…' : x.text)}</div>
+      <div class="at"><span>${esc(x.label)}</span><a href="${fileUrl(x, page && page[1])}" target="_blank" rel="noopener">${page ? 'Открыть страницу' : 'Открыть документ'}</a></div></div>`;
+  }).join('');
+}
+
 // ---- документы
 function renderDocs() {
   const d = META ? META.docs : [];
   $('docsSub').textContent = d.length ? `${d.length} ${plural(d.length, 'документ', 'документа', 'документов')} · обновлено ${META.built}` : 'Файлы открываются целиком.';
-  $('docs').innerHTML = d.length ? `<div class="card list">` + d.map(x => docItem(x, !x.chunks ? 'без текста - поиск по этому файлу не работает'
-    : /\.pdf$/i.test(x.file) ? `${x.parts} стр.` : x.file.split('.').pop().toUpperCase())).join('') + `</div>`
+  const sub = x => !x.chunks ? 'без текста - поиск по этому файлу не работает' : /\.pdf$/i.test(x.file) ? `${x.parts} стр.` : x.file.split('.').pop().toUpperCase();
+  const secs = [...new Set(d.map(x => x.sec))];   // раздел = папка, в которой лежит документ
+  $('docs').innerHTML = d.length ? secs.map((sec, i) => (secs.length > 1 ? `<h2 ${i ? '' : 'style="margin-top:0"'}>${esc(sec || 'Без раздела')}</h2>` : '') +
+    `<div class="card list">${d.filter(x => x.sec === sec).map(x => docItem(x, sub(x))).join('')}</div>`).join('')
     : `<div class="card empty">${META ? 'Документов пока нет.' : 'Список документов не загрузился. Обновите страницу.'}</div>`;
 }
 
 // ---- старт
 (async () => {
-  loadHours(); vacRender();
+  // свёрнутые блоки помнят своё состояние
+  const FOLD = load('folds', {marks: true});
+  document.querySelectorAll('details.fold').forEach(d => { d.open = !!FOLD[d.dataset.fold]; d.addEventListener('toggle', () => { FOLD[d.dataset.fold] = d.open; save('folds', FOLD); }); });
+  loadHours(); vacRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   try { META = await (await fetch('data/meta.json', {cache: 'no-cache'})).json(); }
   catch (e) { $('homeSub').textContent = 'Список документов не загрузился. Обновите страницу.'; return; }
   // браузер до 10 минут держит старую копию страницы: если сайт пересобран - один раз перечитываем её заново
@@ -849,7 +1179,9 @@ function renderDocs() {
   META.docs.forEach(d => d.stems = new Set(tokens(d.name)));
   const n = META.docs.length;
   $('homeSub').textContent = n ? `${n} ${plural(n, 'документ', 'документа', 'документов')} в базе. Ищу слова во всех формах: «поезд» найдёт и «поезда», и «поездом».` : 'Документов пока нет.';
-  $('tileDocs').textContent = n ? `${n} ${plural(n, 'файл', 'файла', 'файлов')} целиком` : 'пока пусто';
+  $('tileDocs').textContent = n ? `${n} ${plural(n, 'файл', 'файла', 'файлов')} по разделам` : 'пока пусто';
+  renderMore();
+  if (UI.offline && UI.offline !== META.v) offlineAll();   // сайт пересобран: обновляем скачанное для работы без сети
   const fromHash = () => {   // ссылкой на поиск можно поделиться: адрес хранит запрос
     let q = '';
     try { q = decodeURIComponent((/^#q=(.*)$/.exec(location.hash) || [])[1] || ''); } catch (e) {}
