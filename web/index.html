@@ -105,6 +105,9 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .trip b{display:block;font-size:17px;margin:2px 0}
 .trip small{display:block;color:var(--muted);font-size:12.5px}
 .trip .w{color:var(--amber);font-weight:600}
+.trip .info{color:var(--text);font-weight:600}
+.trip .acts{display:flex;gap:8px;flex:none}
+#tripTitle{scroll-margin-top:76px}
 .trip .x{width:36px;height:36px;border-radius:12px;color:var(--muted);border:1px solid var(--line);font-size:16px;display:grid;place-items:center}
 .note{color:var(--muted);font-size:12px;margin:12px 2px 0}
 
@@ -312,11 +315,20 @@ html.big{zoom:1.15}
       <b id="monName"></b><button onclick="shiftMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
     <div id="hoursSum"></div>
 
-    <h2>Добавить поездку</h2>
+    <h2 id="tripTitle">Добавить поездку</h2>
     <form class="card form" onsubmit="event.preventDefault();addShift()">
       <div class="two">
         <label>Явка<input type="datetime-local" id="sStart" oninput="preview()"></label>
         <label>Окончание работы<input type="datetime-local" id="sEnd" oninput="preview()"></label>
+      </div>
+      <div class="pre">Окончание можно не заполнять: запишите поездку перед выездом и допишите время после.</div>
+      <div class="two keep">
+        <label>Серия электровоза<input class="inp" id="tLoco" autocomplete="off" maxlength="30" placeholder="например, 2ЭС5К"></label>
+        <label>Номер поезда<input class="inp" id="tTrain" autocomplete="off" maxlength="12" inputmode="numeric" placeholder="например, 2345"></label>
+      </div>
+      <div class="two keep">
+        <label>Вес, тс<input class="inp" id="tW" autocomplete="off" maxlength="8" inputmode="decimal" placeholder="например, 5200"></label>
+        <label>Оси<input class="inp" id="tAx" autocomplete="off" maxlength="5" inputmode="numeric" placeholder="например, 280"></label>
       </div>
       <button type="button" class="tog" onclick="toggleRest()"><span class="sw" id="restSw"></span>Был отдых в пункте оборота</button>
       <div class="two" id="restBox" style="display:none">
@@ -326,6 +338,7 @@ html.big{zoom:1.15}
       <div class="pre" id="sPre"></div>
       <div class="err" id="sErr"></div>
       <button class="btn" id="sBtn">Записать поездку</button>
+      <button type="button" class="linkbtn" id="sCancel" style="display:none" onclick="editShift(0)">Отменить изменение</button>
     </form>
 
     <h2>Поездки за месяц</h2>
@@ -534,12 +547,19 @@ function renderHours(r) {
         <button>Сохранить</button>${r.norm_own ? '<span>своя</span>' : '<span>календарь</span>'}</form></div>` +
     (r.last ? `<div class="card next"><span class="badge" style="--c:var(--green)">${ic('clock')}</span><span><small>Следующая явка не раньше</small>
       <b>${dt(r.last.next)}</b><small>отдых дома ${hm(r.last.home)} после поездки ${dt(r.last.start)}</small></span></div>` : '');
-  $('trips').innerHTML = r.items.length ? `<div class="card">` + r.items.map(x =>
-    `<div class="trip"><div><div class="when">${dt(x.start)} → ${dt(x.end)}</div><b>${hm(x.work)}</b>
+  // данные поезда: номер, электровоз, вес, оси; из веса и осей - сразу в расчёты
+  const info = x => {
+    const t = [x.train && `поезд № ${esc(x.train)}`, esc(x.loco), x.weight && `${esc(x.weight)} тс`, x.axles && `${esc(x.axles)} ${plural(int(x.axles), 'ось', 'оси', 'осей')}`].filter(Boolean).join(' · ');
+    return (t ? `<small class="info">${t}</small>` : '') + (num(x.weight) ? `<small><button class="linkbtn" onclick="tripTo(${x.id},'vu')">Справка ВУ-45</button> · <button class="linkbtn" onclick="tripTo(${x.id},'shoe')">Башмаки</button></small>` : '');
+  };
+  const acts = x => `<span class="acts"><button class="x" onclick="editShift(${x.id})" aria-label="Изменить поездку">✎</button><button class="x" onclick="delShift(${x.id})" aria-label="Удалить поездку">✕</button></span>`;
+  $('trips').innerHTML = r.items.length || r.open.length ? `<div class="card">` + r.open.map(x =>
+    `<div class="trip"><div><div class="when">${dt(x.start)} → …</div><b>Не завершена</b>${info(x)}
+      <small class="w">Допишите окончание работы (кнопка ✎) - посчитаю часы и отдых.</small></div>${acts(x)}</div>`).join('') + r.items.map(x =>
+    `<div class="trip"><div><div class="when">${dt(x.start)} → ${dt(x.end)}</div><b>${hm(x.work)}</b>${info(x)}
       <small>${x.rest ? `отдых в обороте ${hm(x.rest)} · ` : ''}ночных ${hm(x.night)} · дома не меньше ${hm(x.home)}</small>
       ${x.month_work !== x.work ? `<small>в этом месяце ${hm(x.month_work)}</small>` : ''}
-      ${x.warn.map(w => `<small class="w">${esc(w)}</small>`).join('')}</div>
-      <button class="x" onclick="delShift(${x.id})" aria-label="Удалить поездку">✕</button></div>`).join('') + `</div>`
+      ${x.warn.map(w => `<small class="w">${esc(w)}</small>`).join('')}</div>${acts(x)}</div>`).join('') + `</div>`
     : `<div class="card empty">В этом месяце поездок пока нет.</div>`;
   payRender(r);
   if (r.ym === (d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}`)(new Date())) $('tileHours').textContent = `${hm(r.work)} из ${+r.norm} ч`;
@@ -556,20 +576,42 @@ function preview() {
   const rest = restOn ? Math.max(0, mins(ra, rb)) : 0, work = mins(a, b) - rest;
   $('sPre').innerHTML = `Рабочее время <b>${hm(work)}</b> · отдых дома не меньше <b>${hm(Math.max(960, Math.round(work * 2.6) - rest))}</b>`;
 }
+let EDIT = 0;   // номер поездки, которую сейчас изменяют в форме
 function addShift() {
-  const val = id => $(id).value.slice(0, 16);
-  const x = {start: val('sStart'), end: val('sEnd'), rest_start: restOn ? val('rStart') : '', rest_end: restOn ? val('rEnd') : ''};
-  if (!x.start || !x.end || (restOn && !(x.rest_start && x.rest_end))) { $('sErr').textContent = 'Заполните дату и время во всех полях.'; return; }
-  const err = tripError(x);
+  const val = id => $(id).value.slice(0, 16), txt = id => $(id).value.trim();
+  const x = {start: val('sStart'), end: val('sEnd'), rest_start: restOn ? val('rStart') : '', rest_end: restOn ? val('rEnd') : '',
+    loco: txt('tLoco'), train: txt('tTrain'), weight: txt('tW'), axles: txt('tAx')};
+  if (!x.start) { $('sErr').textContent = 'Укажите дату и время явки.'; return; }
+  if (restOn && !(x.end && x.rest_start && x.rest_end)) { $('sErr').textContent = 'Отдых в пункте оборота записывается вместе с окончанием работы: заполните все три времени.'; return; }
+  const err = tripError(x, EDIT);
   if (err) { $('sErr').textContent = err; return; }
-  HRS.shifts.push(Object.assign(x, {id: ++HRS.seq})); save('hours', HRS);
-  ['sStart', 'sEnd', 'rStart', 'rEnd'].forEach(i => $(i).value = '');
-  if (restOn) toggleRest();
-  $('sPre').textContent = '';
+  const old = HRS.shifts.find(t => t.id === EDIT);
+  if (old) Object.assign(old, x); else HRS.shifts.push(Object.assign(x, {id: ++HRS.seq}));
+  save('hours', HRS);
+  editShift(0);
   YM = x.start.slice(0, 7); loadHours();
+}
+function editShift(id) {   // поездка переносится в форму; 0 - очистить форму
+  const x = HRS.shifts.find(t => t.id === id), set = (el, v) => $(el).value = v || '';
+  EDIT = x ? id : 0;
+  set('sStart', x && x.start); set('sEnd', x && x.end); set('tLoco', x && x.loco); set('tTrain', x && x.train); set('tW', x && x.weight); set('tAx', x && x.axles);
+  if (restOn !== !!(x && x.rest_start)) toggleRest();
+  set('rStart', x && x.rest_start); set('rEnd', x && x.rest_end);
+  $('tripTitle').textContent = x ? 'Изменить поездку' : 'Добавить поездку';
+  $('sBtn').textContent = x ? 'Сохранить изменения' : 'Записать поездку';
+  $('sCancel').style.display = x ? '' : 'none';
+  preview();
+  if (x) $('tripTitle').scrollIntoView({block: 'start'});
+}
+function tripTo(id, mode) {   // вес и оси поездки подставляются в расчёт
+  const x = HRS.shifts.find(t => t.id === id);
+  if (!x) return;
+  if (mode === 'vu') { VU.w = x.weight; VU.ax = x.axles || ''; save('vu45', VU); } else { SH.w = x.weight; save('calcShoe', SH); }
+  go('calc', mode);
 }
 function delShift(id) {
   if (!confirm('Удалить поездку?')) return;
+  if (EDIT === id) editShift(0);
   HRS.shifts = HRS.shifts.filter(x => x.id !== id); save('hours', HRS); loadHours();
 }
 function setNorm() {
@@ -774,20 +816,23 @@ function tripCalc(x, lo = -Infinity, hi = Infinity) {   // lo/hi - границ�
 }
 function hoursData(ym) {
   const [lo, hi] = bounds(ym), own = HRS.norms[ym];
-  const items = HRS.shifts.filter(x => tm(x.start) < hi && tm(x.end) > lo).sort((p, q) => p.start < q.start ? -1 : 1).map(x => tripCalc(x, lo, hi));
-  const last = HRS.shifts.reduce((m, x) => !m || x.end > m.end ? x : m, null);
+  const done = HRS.shifts.filter(x => x.end);   // без окончания - поездка ещё не завершена
+  const items = done.filter(x => tm(x.start) < hi && tm(x.end) > lo).sort((p, q) => p.start < q.start ? -1 : 1).map(x => tripCalc(x, lo, hi));
+  const last = done.reduce((m, x) => !m || x.end > m.end ? x : m, null);
   return {ym, norm: own != null ? own : defaultNorm(ym), norm_own: own != null, items, last: last && tripCalc(last),
+    open: HRS.shifts.filter(x => !x.end).sort((p, q) => p.start < q.start ? -1 : 1),
     work: items.reduce((s, i) => s + i.month_work, 0), night: items.reduce((s, i) => s + i.month_night, 0), hol: items.reduce((s, i) => s + i.month_hol, 0)};
 }
-function tripError(x) {   // текст ошибки или пустая строка
+function tripError(x, skip) {   // текст ошибки или пустая строка; skip - номер поездки, которую изменяют
   const ok = s => /^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(s);
+  if (!x.end) return ok(x.start) ? '' : 'Укажите дату и время полностью.';
   if (!ok(x.start) || !ok(x.end) || ((x.rest_start || x.rest_end) && !(ok(x.rest_start) && ok(x.rest_end)))) return 'Укажите дату и время полностью.';
   const a = tm(x.start), b = tm(x.end);
   if (b <= a) return 'Окончание работы должно быть позже явки.';
   if (b - a > MAX_TRIP) return 'Поездка длиннее 72 часов - проверьте даты.';
   if (x.rest_start && !(a < tm(x.rest_start) && tm(x.rest_start) < tm(x.rest_end) && tm(x.rest_end) < b))
     return 'Отдых в пункте оборота должен быть внутри поездки: явка - начало отдыха - конец отдыха - окончание.';
-  if (HRS.shifts.some(s => tm(s.start) < b && tm(s.end) > a)) return 'На это время уже записана другая поездка.';
+  if (HRS.shifts.some(s => s.id !== skip && s.end && tm(s.start) < b && tm(s.end) > a)) return 'На это время уже записана другая поездка.';
   return '';
 }
 
