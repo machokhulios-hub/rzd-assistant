@@ -169,6 +169,18 @@ nav button.on{color:var(--text)}nav button.on svg{color:var(--red)}
 .hit mark{background:rgba(255,193,59,.18);color:var(--amber);padding:0 3px;border-radius:5px;font-weight:700}
 .morebtn{display:block;width:100%;padding:13px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-weight:700;color:var(--muted)}
 a.item{color:inherit;text-decoration:none}
+
+/* календарь отпуска */
+.vac{padding:16px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.cal i{font-style:normal;font-size:11px;font-weight:700;color:var(--muted);padding-bottom:4px}
+.cal button{aspect-ratio:1;border-radius:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.cal button.we{color:var(--muted)}
+.cal button.hol{color:var(--red)}
+.cal button.now{box-shadow:inset 0 0 0 1px var(--line)}
+.cal button.in{background:rgba(52,211,153,.16);color:var(--text)}
+.cal button.edge{background:var(--green);color:#0d0f13;font-weight:800}
+.vac .big{font-size:30px;margin-top:14px}
 </style>
 </head>
 <body>
@@ -221,6 +233,15 @@ a.item{color:inherit;text-decoration:none}
         <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><i class="dot"></i><b>Справка ВУ-45</b><small>нажатие колодок и ручные тормоза</small></button>
         <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><i class="dot"></i><b>Документы</b><small id="tileDocs">все файлы целиком</small></button>
       </div>
+
+      <h2>Календарь отпуска <a onclick="vacClear()">очистить</a></h2>
+      <div class="card vac sum">
+        <div class="mon"><button onclick="vacMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
+          <b id="vacName"></b><button onclick="vacMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
+        <div class="cal" id="vacGrid"></div>
+        <div id="vacOut"></div>
+      </div>
+      <p class="note">Нерабочие праздничные дни, попавшие в отпуск, в число дней отпуска не входят (статья 120 Трудового кодекса). Переносы выходных по производственному календарю не учитываются.</p>
     </div>
   </section>
 
@@ -615,6 +636,41 @@ function tripError(x) {   // текст ошибки или пустая стр�
   return '';
 }
 
+// ---- календарь отпуска: первое нажатие - первый день, второе - последний
+const HOLIDAYS = ['01-01', '01-02', '01-03', '01-04', '01-05', '01-06', '01-07', '01-08', '02-23', '03-08', '05-01', '05-09', '06-12', '11-04'];   // статья 112 ТК
+const VAC = load('vacation', {a: '', b: ''});
+const iso = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+const dmy = s => `${s.slice(8, 10)}.${s.slice(5, 7)}.${s.slice(0, 4)}`;
+const utc = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+let VM = (VAC.a || iso(new Date())).slice(0, 7);
+function vacMonth(k) { VM = iso(new Date(+VM.slice(0, 4), +VM.slice(5, 7) - 1 + k, 1)).slice(0, 7); vacRender(); }
+function vacPick(s) {
+  if (!VAC.a || VAC.b) { VAC.a = s; VAC.b = ''; } else if (s < VAC.a) { VAC.b = VAC.a; VAC.a = s; } else VAC.b = s;
+  save('vacation', VAC); vacRender();
+}
+function vacClear() { VAC.a = VAC.b = ''; save('vacation', VAC); vacRender(); }
+function vacRender() {
+  const y = +VM.slice(0, 4), m = +VM.slice(5, 7) - 1, first = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate(), now = iso(new Date());
+  const {a, b} = VAC;
+  $('vacName').textContent = `${MONTHS[m]} ${y}`;
+  let h = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(w => `<i>${w}</i>`).join('') + '<span></span>'.repeat(first);
+  for (let d = 1; d <= n; d++) {
+    const s = `${VM}-${p2(d)}`, cls = [(first + d - 1) % 7 > 4 && 'we', HOLIDAYS.includes(s.slice(5)) && 'hol', s === now && 'now',
+      a && b && s > a && s < b && 'in', (s === a || s === b) && 'edge'].filter(Boolean).join(' ');
+    h += `<button class="${cls}" onclick="vacPick('${s}')">${d}</button>`;
+  }
+  $('vacGrid').innerHTML = h;
+  if (!a) { $('vacOut').innerHTML = `<div class="verd">Нажмите первый день отпуска, затем последний.</div>`; return; }
+  if (!b) { $('vacOut').innerHTML = `<div class="verd">Первый день - ${dmy(a)}. Теперь нажмите последний день.</div>`; return; }
+  const days = Math.round((utc(b) - utc(a)) / 864e5) + 1;
+  let hol = 0;
+  for (let t = utc(a); t <= utc(b); t += 864e5) hol += HOLIDAYS.includes(new Date(t).toISOString().slice(5, 10));
+  const back = new Date(utc(b) + 864e5).toISOString().slice(0, 10), word = k => plural(k, 'день', 'дня', 'дней');
+  $('vacOut').innerHTML = `<div class="big">${days} ${word(days)} <small>с ${dmy(a)} по ${dmy(b)}</small></div>
+    <div class="stats" style="margin-top:14px"><div><small>Праздничных</small><b>${hol}</b></div><div><small>В счёт отпуска</small><b>${days - hol} ${word(days - hol)}</b></div>
+      <div><small>Выход</small><b>${dmy(back).slice(0, 5)}</b></div></div>`;
+}
+
 // ---- слова и их основы. Стеммер и разбор слов повторяют build.py - они должны совпадать буква в букву.
 // <stem>
 const VOW = 'аеиоуыэюя', RV = new RegExp(`^(.*?[${VOW}])(.*)$`), DERIV = new RegExp(`[^${VOW}][${VOW}].*ость?$`);
@@ -779,7 +835,7 @@ function renderDocs() {
 
 // ---- старт
 (async () => {
-  loadHours();
+  loadHours(); vacRender();
   try { META = await (await fetch('data/meta.json', {cache: 'no-cache'})).json(); }
   catch (e) { $('homeSub').textContent = 'Список документов не загрузился. Обновите страницу.'; return; }
   STOP = new Set(META.stop);
