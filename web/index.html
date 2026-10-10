@@ -520,11 +520,15 @@ html.big{zoom:1.15}
           <label>Вес поезда, тс<input class="inp" id="shW" inputmode="decimal" placeholder="например, 4200" oninput="shSet('w',this.value)"></label>
           <label>Уклон, тысячных<input class="inp" id="shI" inputmode="decimal" placeholder="например, 9" oninput="shSet('i',this.value)"></label>
         </div>
-        <label>Состав<select class="inp" id="shKind" onchange="shSet('kind',this.value)"><option value="g">гружёный</option><option value="p">порожний</option></select></label>
+        <div class="two keep">
+          <label>Всего осей<input class="inp" id="shAx" inputmode="numeric" placeholder="например, 280" oninput="shSet('ax',this.value)"></label>
+          <label>Состав<select class="inp" id="shKind" onchange="shSet('kind',this.value)"><option value="a">по нагрузке на ось</option><option value="g">гружёный</option><option value="p">порожний</option></select></label>
+        </div>
+        <div class="pre" id="shFrom"></div>
       </div>
       <h2>Итог</h2>
       <div id="shOut"></div>
-      <p class="note">По «Порядку определения потребного количества тормозных башмаков для закрепления поезда на перегоне» (есть в документах, раздел «Тормоза»): тормозные оси = вес поезда / 100 × коэффициент уклона; в гружёном поезде один башмак заменяет 3 оси, в порожнем - 1 ось. Коэффициенты для порожнего поезда на уклонах до 7 тысячных (0,4 и 0,5) взяты из таблицы этого документа. Результат округляю вверх; в двух строках таблицы (4600 и 5600 тс, уклон до 8) напечатано на один башмак меньше. Сверяйте с таблицей и местной инструкцией.</p>
+      <p class="note">По «Порядку определения потребного количества тормозных башмаков для закрепления поезда на перегоне» (есть в документах, раздел «Тормоза»): тормозные оси = вес поезда / 100 × коэффициент уклона; в гружёном поезде один башмак заменяет 3 оси, в порожнем - 1 ось. Коэффициенты для порожнего поезда на уклонах до 7 тысячных (0,4 и 0,5) взяты из таблицы этого документа. Результат округляю вверх; в двух строках таблицы (4600 и 5600 тс, уклон до 8) напечатано на один башмак меньше. Гружёный или порожний состав определяю по нагрузке на ось, как в таблице III.4 Правил эксплуатации тормозов № 151: 10 тс и более - гружёный. Уклоны круче 20 до 40 тысячных - по той же таблице III.4 (башмаков на 100 тс веса). Сверяйте с таблицей и местной инструкцией.</p>
     </div>
 
     <div id="c-vu">
@@ -879,7 +883,7 @@ function exportTrips() {
 function tripTo(id, mode) {   // вес и оси поездки подставляются в расчёт
   const x = HRS.shifts.find(t => t.id === id);
   if (!x) return;
-  if (mode === 'vu') { VU.w = x.weight; VU.ax = x.axles || ''; save('vu45', VU); } else { SH.w = x.weight; save('calcShoe', SH); }
+  if (mode === 'vu') { VU.w = x.weight; VU.ax = x.axles || ''; save('vu45', VU); } else { SH.w = x.weight; SH.ax = x.axles || ''; save('calcShoe', SH); }
   go('calc', mode);
 }
 function delShift(id) {
@@ -1185,18 +1189,34 @@ function payCalc() {
 }
 
 // ---- тормозные башмаки для закрепления поезда на перегоне
-const SH = load('calcShoe', {w: '', i: '', kind: 'g'});
-function shSet(key, value) { SH[key] = value; save('calcShoe', SH); shCalc(); }
-function shRender() { $('shW').value = SH.w; $('shI').value = SH.i; $('shKind').value = SH.kind; shCalc(); }
+const SH = Object.assign({w: '', i: '', ax: '', kind: 'a'}, load('calcShoe', {}));
+function shSet(key, value, redraw) { SH[key] = value; save('calcShoe', SH); redraw ? shRender() : shCalc(); }
+function shRender() { $('shW').value = SH.w; $('shI').value = SH.i; $('shAx').value = SH.ax || ''; $('shKind').value = SH.kind; shCalc(); }
+function shFromVu() { SH.w = VU.w; SH.ax = VU.ax; save('calcShoe', SH); shRender(); }
 function shCalc() {
-  const w = num(SH.w), i = Math.ceil(num(SH.i) - 1e-9), empty = SH.kind === 'p';
+  const w = num(SH.w), ax = Math.floor(num(SH.ax)), i = Math.ceil(num(SH.i) - 1e-9), load = w && ax ? w / ax : 0;
+  // вес и оси из справки ВУ-45, если там другие
+  const vw = num(VU.w), vax = Math.floor(num(VU.ax));
+  $('shFrom').innerHTML = vw && (vw !== w || vax !== ax) ? `<button class="linkbtn" onclick="shFromVu()">Взять из ВУ-45: ${ru(vw)} тс${vax ? ', ' + vax + ' осей' : ''}</button>` : '';
   if (!w || String(SH.i).trim() === '') { $('shOut').innerHTML = `<div class="card empty">Укажите вес поезда и уклон.</div>`; return; }
-  if (i > 20) { $('shOut').innerHTML = `<div class="card empty">Коэффициенты в документе даны для уклонов до 20 тысячных. Круче - по указанию владельца инфраструктуры.</div>`; return; }
+  if (SH.kind === 'a' && !load) { $('shOut').innerHTML = `<div class="card empty">Укажите всего осей - определю по нагрузке на ось, гружёный состав или порожний. Или выберите состав вручную.</div>`; return; }
+  if (i > 40) { $('shOut').innerHTML = `<div class="card empty">Нормы даны для уклонов до 40 тысячных. Круче - по указанию владельца инфраструктуры.</div>`; return; }
+  const empty = SH.kind === 'a' ? load < 10 : SH.kind === 'p';
+  const kind = (empty ? 'порожний' : 'гружёный') + (SH.kind === 'a' ? ` - ${ru(load)} тс на ось` : '');
+  if (i > 20) {   // круче 20 тысячных - таблица III.4 Правил № 151: башмаков на 100 тс веса (уклоны через 2 тысячных, нечётный - по следующему)
+    const h = VU_HAND.find(r => r[0] * 1000 >= i - 1e-9), k = h[empty ? 2 : 1], shoes = up(w * k / 100);
+    $('shOut').innerHTML = `<div class="card sum"><div class="big">${shoes} ${plural(shoes, 'башмак', 'башмака', 'башмаков')} <small>${ru(w)} тс / 100 × ${ru(k)} (таблица III.4, уклон ${ru(h[0] * 1000)} ‰)</small></div>
+      <div class="stats" style="margin-top:14px"><div><small>Уклон</small><b>${i} ‰</b></div><div><small>На 100 тс</small><b>${ru(k)} башм.</b></div>
+        <div><small>Состав</small><b>${empty ? 'порожний' : 'гружёный'}</b></div></div>
+      <div class="verd">${SH.kind === 'a' ? `Нагрузка ${ru(load)} тс на ось. ` : ''}«Порядок» даёт коэффициенты до 20 тысячных, круче считаю по Правилам № 151.</div></div>`;
+    return;
+  }
   const k = empty && i <= 6 ? .4 : empty && i === 7 ? .5 : i <= 8 ? .6 : (i - 2) / 10;
   const axles = Math.round(w * k * 10) / 1000, shoes = up(empty ? axles : axles / 3);
   $('shOut').innerHTML = `<div class="card sum"><div class="big">${shoes} ${plural(shoes, 'башмак', 'башмака', 'башмаков')} <small>${ru(w)} тс / 100 × ${ru(k)} = ${ru(axles, 2)} тормозных осей</small></div>
     <div class="stats" style="margin-top:14px"><div><small>Уклон</small><b>${i} ‰</b></div><div><small>Коэффициент</small><b>${ru(k)}</b></div>
-      <div><small>1 башмак</small><b>${empty ? '1 ось' : '3 оси'}</b></div></div></div>`;
+      <div><small>1 башмак</small><b>${empty ? '1 ось' : '3 оси'}</b></div></div>
+    <div class="verd">Состав ${kind}.</div></div>`;
 }
 
 // ---- инструменты: калькулятор, часы, таймер
