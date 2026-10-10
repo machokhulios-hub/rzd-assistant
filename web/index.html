@@ -289,6 +289,12 @@ a.item{color:inherit;text-decoration:none}
 .qz .sw{margin-left:0}
 .linkbtn{color:var(--blue);font-weight:700;font-size:13px}
 .qz .linkbtn{margin-left:auto}
+.qz .ans{margin-top:12px}
+.qz .ans .hit{margin:0;background:var(--bg)}
+.qz .ans .more{display:flex;justify-content:space-between;gap:10px;margin-top:8px;font-size:12px;color:var(--muted)}
+.qz .ans .more .linkbtn{margin-left:0;font-size:12px}
+.qtog{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:13.5px;font-weight:600;width:100%;text-align:left}
+.qtog .sw{margin-left:auto}
 
 /* инструменты: калькулятор, часы, таймер */
 .kcd{padding:16px;text-align:right}
@@ -679,9 +685,10 @@ html.big{zoom:1.15}
     <h1>Билеты</h1><p class="sub" id="quizSub">Действия в нестандартных ситуациях: грузовое движение, электротяга.</p>
     <div class="mon"><button onclick="quizStep(-1)" aria-label="Предыдущий билет"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
       <b id="quizName"></b><button onclick="quizStep(1)" aria-label="Следующий билет"><svg><use href="#i-chev"/></svg></button></div>
+    <button class="qtog" onclick="quizOpenAll()"><span>Показывать ответы из документов сразу</span><span class="sw" id="qzOpenSw"></span></button>
     <div id="quiz"></div>
     <button class="morebtn" onclick="quizRandom()">Случайный билет</button>
-    <p class="note">В файле билетов есть только вопросы, готовых ответов в нём нет. «Найти в документах» ищет вопрос по загруженным документам. Отметки «Знаю» хранятся в этом браузере.</p>
+    <p class="note">В файле билетов есть только вопросы, готовых ответов в нём нет. «Показать ответ» подставляет фрагмент загруженного документа, где больше всего слов вопроса, - это подсказка, а не утверждённый ответ: сверяйте с документом по ссылке. «Все фрагменты» открывает поиск по вопросу. Отметки «Знаю» хранятся в этом браузере.</p>
   </section>
 
   <!-- Настройки -->
@@ -1662,11 +1669,40 @@ function quizRender() {
   const t = TICKETS[QZ.n] || TICKETS[QZ.n = 0], total = TICKETS.reduce((s, x) => s + x.q.length, 0), known = Object.keys(QZ.done).length;
   $('quizName').textContent = `Билет № ${t.n}`;
   $('quizSub').textContent = `Действия в нестандартных ситуациях: грузовое движение, электротяга. Отмечено «знаю»: ${known} из ${total}.`;
+  $('qzOpenSw').classList.toggle('on', !!QZ.open);
   $('quiz').innerHTML = t.q.map((q, i) => { const key = `${t.n}.${i + 1}`; return `<div class="card qz"><p><b>${i + 1}.</b> ${esc(q)}</p>
     <div class="row2"><button onclick="quizMark('${key}')"><span class="sw ${QZ.done[key] ? 'on' : ''}"></span>Знаю</button>
-      <button class="linkbtn" data-q="${esc(q)}" onclick="go('search');find(this.dataset.q)">Найти в документах</button></div></div>`; }).join('');
+      <button class="linkbtn" id="qa${i}" onclick="quizAns(${i})">${QZ.open ? 'Скрыть ответ' : 'Показать ответ'}</button></div><div class="ans" id="qans${i}" hidden></div></div>`; }).join('');
+  if (QZ.open) t.q.forEach((q, i) => quizAns(i, true));
   quizTile();
 }
+// ответ к вопросу - фрагменты документов, где больше всего слов вопроса (сумма весов BM25 из поискового индекса)
+const ANS = {};
+async function answerIds(q) {
+  if (ANS[q]) return ANS[q];
+  const stems = [...new Set((low(q).match(/[a-zа-я0-9]+/g) || []).filter(keep).map(stem))];
+  const lists = await Promise.all(stems.map(posting)), acc = new Map();
+  lists.forEach(l => { if (Array.isArray(l)) for (let i = 0; i < l.length; i += 2) acc.set(l[i], (acc.get(l[i]) || 0) + l[i + 1]); });
+  return ANS[q] = {stems, ids: [...acc].sort((a, b) => b[1] - a[1]).slice(0, 3).map(r => r[0])};
+}
+async function quizAns(i, show) {
+  const box = $('qans' + i), q = (TICKETS[QZ.n] || {q: []}).q[i], btn = $('qa' + i);
+  if (!box || !q) return;
+  if (!show && !box.hidden) { box.hidden = true; btn.textContent = 'Показать ответ'; return; }
+  box.hidden = false; btn.textContent = 'Скрыть ответ';
+  if (box.dataset.k === '1') return;
+  if (!META) { box.innerHTML = '<div class="verd">Список документов ещё загружается - нажмите через секунду.</div>'; return; }
+  box.innerHTML = '<div class="sk" style="height:90px"></div>';
+  let a, rows;
+  try { a = await answerIds(q); rows = await Promise.all(a.ids.map(async id => (await data(`t/${Math.floor(id / META.per)}.json`))[id % META.per])); }
+  catch (e) { box.innerHTML = '<div class="verd">Нет связи с сайтом - попробуйте ещё раз.</div>'; return; }
+  if (!rows.length) { box.innerHTML = '<div class="verd">В загруженных документах подходящего фрагмента нет.</div>'; box.dataset.k = '1'; return; }
+  const keepMarks = MARKS; MARKS = new Set(a.stems);   // подсветка слов вопроса
+  box.innerHTML = hitCard(a.ids[0], rows[0]) + `<div class="more"><span>Самый подходящий фрагмент по словам вопроса - сверяйте с документом.</span>
+    <button class="linkbtn" data-q="${esc(q)}" onclick="go('search');find(this.dataset.q)">Все фрагменты</button></div>`;
+  MARKS = keepMarks; box.dataset.k = '1';
+}
+function quizOpenAll() { QZ.open = !QZ.open; save('quiz', QZ); quizRender(); }
 function quizTile() { const n = Object.keys(QZ.done).length; $('tileQuiz').textContent = n ? `отмечено «знаю»: ${n}` : 'нестандартные ситуации'; }
 
 // ---- настройки: светлая тема, крупный шрифт, работа без сети
