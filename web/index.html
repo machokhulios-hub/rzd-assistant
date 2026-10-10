@@ -20,6 +20,8 @@
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:Manrope,-apple-system,"SF Pro Text",Roboto,sans-serif;font-size:15px;line-height:1.45}
 body{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
 button,input,textarea{font:inherit;color:inherit}
+/* iOS увеличивает страницу при фокусе на поле со шрифтом меньше 16px */
+@media (pointer:coarse){input,select,textarea{font-size:16px!important}}
 button{cursor:pointer;border:0;background:none}
 svg{width:1em;height:1em;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .wrap{max-width:720px;margin:0 auto;padding:0 var(--pad)}
