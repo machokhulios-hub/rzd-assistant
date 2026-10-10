@@ -89,9 +89,7 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .stats div{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:10px;min-width:0}
 .stats small{display:block;color:var(--muted);font-size:11.5px}
 .stats b{font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.normf{display:flex;align-items:center;gap:8px;white-space:nowrap;margin-top:12px;font-size:13px;color:var(--muted)}
-.normf input{width:74px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:7px 10px;outline:0;color:var(--text);font-weight:700}
-.normf button{padding:7px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-weight:700;color:var(--text)}
+.normf{display:flex;align-items:center;gap:8px;white-space:nowrap;margin-top:12px;font-size:12px;color:var(--muted);white-space:normal}
 .next{display:flex;gap:12px;align-items:center;padding:14px 16px;margin-top:12px}
 .next b{display:block;font-size:17px}
 .next small{color:var(--muted);font-size:12.5px}
@@ -590,8 +588,7 @@ function renderHours(r) {
       <div class="prog ${over ? 'over' : ''}"><i style="width:${norm ? Math.min(100, r.work / norm * 100) : 0}%"></i></div>
       <div class="stats"><div><small>${over ? 'Переработка' : 'До нормы'}</small><b>${hs(left)}</b></div>
         <div><small>Ночные</small><b>${hs(r.night)}</b></div><div><small>Поездок</small><b>${r.items.length}</b></div></div>
-      <form class="normf" onsubmit="event.preventDefault();setNorm()">Норма, ч<input id="normIn" inputmode="decimal" value="${+r.norm}">
-        <button>Сохранить</button>${r.norm_own ? '<span>своя</span>' : '<span>календарь</span>'}</form></div>` +
+      <div class="normf">Норма по производственному календарю (40-часовая неделя)</div></div>` +
     (r.last ? `<div class="card next"><span class="badge" style="--c:var(--green)">${ic('clock')}</span><span><small>Следующая явка не раньше</small>
       <b>${dt(r.last.next)}</b><small>отдых дома ${hm(r.last.home)} после поездки ${dt(r.last.start)}</small></span></div>` : '');
   const en = monthEnergy(r.ym);
@@ -704,11 +701,6 @@ function delShift(id) {
   if (!confirm('Удалить поездку?')) return;
   if (EDIT === id) editShift(0);
   HRS.shifts = HRS.shifts.filter(x => x.id !== id); save('hours', HRS); loadHours();
-}
-function setNorm() {
-  const h = parseFloat($('normIn').value.replace(',', '.'));
-  if (h > 0 && h <= 400) HRS.norms[YM] = h; else delete HRS.norms[YM];   // пусто или не число - возвращаем норму по календарю
-  save('hours', HRS); loadHours();
 }
 
 // ---- калькулятор: режимы
@@ -866,7 +858,7 @@ function vuCalc() {
 // ---- учёт часов: поездки хранятся в браузере на этом устройстве (localStorage).
 // Правила - из «Особенностей режима рабочего времени и времени отдыха» (приказ Минтранса № 339).
 const K_HOME = 2.6, MIN_HOME = 960, MAX_CONT = 720, MAX_TRIP = 4320;
-// норма часов при 40-часовой неделе по производственному календарю; свою норму пользователь задаёт сам
+// норма часов при 40-часовой неделе по производственному календарю; изменить её нельзя
 const NORMS = {'2026-01': 120, '2026-02': 152, '2026-03': 168, '2026-04': 175, '2026-05': 151, '2026-06': 167,
   '2026-07': 184, '2026-08': 168, '2026-09': 176, '2026-10': 176, '2026-11': 159, '2026-12': 176};
 const HRS = load('hours', {shifts: [], norms: {}, seq: 0});
@@ -906,11 +898,11 @@ function tripCalc(x, lo = -Infinity, hi = Infinity) {   // lo/hi - границ�
     month_work: sum((p, q) => clip(p, q, lo, hi)), month_night: sum((p, q) => night(p, q, lo, hi)), month_hol: sum((p, q) => holiday(p, q, lo, hi))});
 }
 function hoursData(ym) {
-  const [lo, hi] = bounds(ym), own = HRS.norms[ym];
+  const [lo, hi] = bounds(ym);
   const done = HRS.shifts.filter(x => x.end);   // без окончания - поездка ещё не завершена
   const items = done.filter(x => tm(x.start) < hi && tm(x.end) > lo).sort((p, q) => p.start < q.start ? -1 : 1).map(x => tripCalc(x, lo, hi));
   const last = done.reduce((m, x) => !m || x.end > m.end ? x : m, null);
-  return {ym, norm: own != null ? own : defaultNorm(ym), norm_own: own != null, items, last: last && tripCalc(last),
+  return {ym, norm: defaultNorm(ym), items, last: last && tripCalc(last),
     open: HRS.shifts.filter(x => !x.end).sort((p, q) => p.start < q.start ? -1 : 1),
     work: items.reduce((s, i) => s + i.month_work, 0), night: items.reduce((s, i) => s + i.month_night, 0), hol: items.reduce((s, i) => s + i.month_hol, 0)};
 }
