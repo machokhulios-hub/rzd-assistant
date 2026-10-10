@@ -207,12 +207,19 @@ def dump(path: Path, obj):
     path.write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), "utf-8")
 
 
+def sec_order(name: str):
+    """Папки по номеру в начале названия: 1, 2, 3, ..., 9, 9.1, 10; папки без номера - в конце, по алфавиту."""
+    m = re.match(r"(\d+(?:\.\d+)*)", name)
+    return (0, tuple(int(x) for x in m.group(1).split(".")), name) if m else (1, (), name)
+
+
 def build():
     nfc = lambda s: unicodedata.normalize("NFC", s)
     # документы лежат в documents/ и в его папках; папка = раздел на сайте (папки на _ и . - служебные)
     tops = sorted(SRC.iterdir()) if SRC.exists() else []
     found = [p for p in tops if p.is_file()] + [p for d in tops if d.is_dir() and d.name[0] not in "._" for p in sorted(d.iterdir()) if p.is_file()]
     found = [p for p in found if not p.name.startswith(".")]
+    secs = sorted((nfc(d.name) for d in tops if d.is_dir() and d.name[0] not in "._"), key=sec_order)   # и пустые папки тоже
     for p in found:
         if p.suffix.lower() not in EXTS:
             print(f"пропущен: {p.name} (нужен PDF, DOCX или TXT)")
@@ -267,7 +274,7 @@ def build():
     # словарь для опечаток: основа -> в скольких фрагментах встречается
     dump(OUT / "data/vocab.json", {t: c for t, c in df.items() if len(t) >= 4 and not t.isdigit()})
     size = sum(f.stat().st_size for d in ("data", "files") for f in (OUT / d).rglob("*") if f.is_file())
-    dump(OUT / "data/meta.json", {"v": version, "built": time.strftime("%d.%m.%Y"), "docs": docs, "chunks": n,
+    dump(OUT / "data/meta.json", {"v": version, "built": time.strftime("%d.%m.%Y"), "docs": docs, "secs": secs, "chunks": n,
                                   "shards": shards, "per": PER_FILE, "bytes": size, "stop": sorted(STOP)})
     print(f"Готово: документов {len(docs)}, фрагментов {n}, слов в индексе {len(post)}, файлов индекса {shards} -> {OUT.name}/")
 

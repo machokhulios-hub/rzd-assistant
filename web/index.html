@@ -79,6 +79,12 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .tile b{font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tile small{color:var(--muted);font-size:12px;line-height:1.3;min-height:2.6em;margin-top:2px;
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.tile.dir{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 1fr;padding:11px 12px 12px}
+.tile.dir .badge{grid-row:auto;margin-bottom:9px;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tile.dir b{white-space:normal;overflow-wrap:anywhere;hyphens:auto;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+.tile.dir small{min-height:0}
+.back{display:inline-flex;align-items:center;gap:4px;margin:0 0 10px -4px;font-weight:700;font-size:13.5px;color:var(--muted)}
+.back svg{transform:rotate(180deg);font-size:16px}
 #v-home{padding-top:14px}
 #v-home h1{font-size:23px}
 #v-home .sub{margin:0;font-size:13px}
@@ -308,6 +314,7 @@ html.big{zoom:1.15}
   <symbol id="i-rain" viewBox="0 0 24 24"><path d="M7 15.5a4 4 0 0 1-.5-7.97A6 6 0 0 1 18 8.5a3.5 3.5 0 0 1-.5 7zM8.5 18.5l-1 2.5M12.5 18.5l-1 2.5M16.5 18.5l-1 2.5"/></symbol>
   <symbol id="i-snow" viewBox="0 0 24 24"><path d="M7 14.5a4 4 0 0 1-.5-7.97A6 6 0 0 1 18 7.5a3.5 3.5 0 0 1-.5 7zM8 18.5h.01M12 18.5h.01M16 18.5h.01M10 21.5h.01M14 21.5h.01"/></symbol>
   <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2.5H6.5A1.5 1.5 0 0 0 5 4v16a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 20V7.5zM14 2.5v5h5M8.5 13h7M8.5 17h5"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2 2.5h8.4A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/></symbol>
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11 12 3.5l8.5 7.5V20a1.5 1.5 0 0 1-1.5 1.5h-4.5v-6h-5v6H5A1.5 1.5 0 0 1 3.5 20z"/></symbol>
   <symbol id="i-news" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M7.5 9h5M7.5 12.5h9M7.5 16h9"/></symbol>
@@ -568,7 +575,7 @@ html.big{zoom:1.15}
 
   <!-- Документы -->
   <section class="view" id="v-docs">
-    <h1>Документы</h1><p class="sub" id="docsSub">Файлы открываются целиком.</p>
+    <h1 id="docsH">Документы</h1><p class="sub" id="docsSub">Файлы открываются целиком.</p>
     <div id="docs"></div>
     <p class="note">Неофициальный справочник. Сверяйте с действующей редакцией документов и местными инструкциями.</p>
   </section>
@@ -672,7 +679,7 @@ const NAV = {quiz: 'home', dates: 'home', train: 'home', tools: 'home', vac: 'ho
 let VIEW = 'home', BACK = [];   // BACK - пройденные разделы для кнопки «Назад» в Telegram
 function go(view, arg, back) {
   if (view === 'home') BACK = [];
-  else if (!back && view !== VIEW) BACK = [...BACK, VIEW].slice(-20);
+  else if (!back && (view !== VIEW || view === 'docs' && arg !== undefined)) BACK = [...BACK, VIEW].slice(-20);
   VIEW = view;
   if (TG) TG.BackButton[view === 'home' ? 'hide' : 'show']();
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
@@ -683,7 +690,7 @@ function go(view, arg, back) {
   if (view === 'search' && !$('q').value) $('q').focus();
   if (view === 'hours') loadHours();
   if (view === 'calc') calcMode(arg);
-  if (view === 'docs') renderDocs();
+  if (view === 'docs') renderDocs(arg);
   if (view === 'dates') renderDates();
   if (view === 'quiz') quizLoad();
   if (view === 'more') renderMore();
@@ -1733,6 +1740,16 @@ function toggleMark(id, el) {
   if (i >= 0) BM.items.splice(i, 1); else BM.items.unshift({k, file: doc.file, name: doc.name, label: row[1], text: row[2]});
   save('bookmarks', BM); el.classList.toggle('on', i < 0); renderMarks();
 }
+function marksMoved() {   // файл переложили в другую папку - закладка ищет его по имени файла
+  const name = f => f.split('/').pop();
+  let moved = false;
+  BM.items.forEach(x => {
+    if (META.docs.some(d => d.file === x.file)) return;
+    const d = META.docs.find(d => name(d.file) === name(x.file));
+    if (d) { x.k = x.k.replace(x.file, d.file); x.file = d.file; moved = true; }
+  });
+  if (moved) { save('bookmarks', BM); renderMarks(); }
+}
 function dropMark(i) { BM.items.splice(i, 1); save('bookmarks', BM); renderMarks(); }
 function renderMarks() {
   $('marksBox').style.display = BM.items.length ? '' : 'none';
@@ -1751,16 +1768,33 @@ const vv = window.visualViewport;
 function dockPos() { const kb = vv ? innerHeight - vv.height - vv.offsetTop : 0; $('dock').style.bottom = kb > 80 ? kb / (UI.big ? 1.15 : 1) + 'px' : ''; }
 if (vv) { vv.addEventListener('resize', dockPos); vv.addEventListener('scroll', dockPos); }
 
-// ---- документы
-function renderDocs() {
-  const d = META ? META.docs : [];
-  $('docsSub').textContent = d.length ? `${d.length} ${plural(d.length, 'документ', 'документа', 'документов')} · обновлено ${META.built}` : 'Файлы открываются целиком.';
+// ---- документы: папки плитками (папка в documents/ = раздел), внутри папки - список файлов
+const DIR_C = ['blue', 'cyan', 'green', 'amber', 'violet', 'red'];
+const dirSecs = () => !META ? [] : META.secs || [...new Set(META.docs.map(x => x.sec).filter(Boolean))];
+function renderDocs(sec) {
+  const d = META ? META.docs : [], secs = dirSecs(), inDir = sec !== undefined && secs.includes(sec);
   const sub = x => !x.chunks ? 'без текста - поиск по этому файлу не работает' : /\.pdf$/i.test(x.file) ? `${x.parts} стр.` : x.file.split('.').pop().toUpperCase();
-  const secs = [...new Set(d.map(x => x.sec))];   // раздел = папка, в которой лежит документ
-  $('docs').innerHTML = d.length ? secs.map((sec, i) => (secs.length > 1 ? `<h2 ${i ? '' : 'style="margin-top:0"'}>${esc(sec || 'Без раздела')}</h2>` : '') +
-    `<div class="card list">${d.filter(x => x.sec === sec).map(x => docItem(x, sub(x))).join('')}</div>`).join('')
-    : `<div class="card empty">${META ? 'Документов пока нет.' : 'Список документов не загрузился. Обновите страницу.'}</div>`;
+  const files = n => `${n} ${plural(n, 'файл', 'файла', 'файлов')}`;
+  $('docsH').textContent = inDir ? sec : 'Документы';
+  if (!META) { $('docsSub').textContent = 'Файлы открываются целиком.'; $('docs').innerHTML = '<div class="card empty">Список документов не загрузился. Обновите страницу.</div>'; return; }
+  if (inDir) {
+    const own = d.filter(x => x.sec === sec);
+    $('docsSub').textContent = own.length ? files(own.length) : 'Папка пока пустая.';
+    $('docs').innerHTML = `<button class="back" onclick="dirBack()">${ic('chev')}Все папки</button>` +
+      (own.length ? `<div class="card list">${own.map(x => docItem(x, sub(x))).join('')}</div>` : '<div class="card empty">Материалы сюда ещё не добавлены.</div>');
+    return;
+  }
+  $('docsSub').textContent = `${secs.length} ${plural(secs.length, 'папка', 'папки', 'папок')} · ${files(d.length)} · обновлено ${META.built}`;
+  const loose = d.filter(x => !x.sec);   // файлы прямо в documents/, без папки
+  $('docs').innerHTML = (secs.length ? `<div class="tiles">${secs.map((x, i) => {
+    const m = /^(\d+(?:\.\d+)*)\.?\s+(.+)$/.exec(x), n = d.filter(y => y.sec === x).length;
+    return `<button class="card tile dir" style="--c:var(--${DIR_C[i % DIR_C.length]})" data-s="${esc(x)}" onclick="go('docs',this.dataset.s)">` +
+      `<span class="badge">${m ? esc(m[1]) : ic('folder')}</span><b>${esc(m ? m[2] : x)}</b><small>${n ? files(n) : 'пусто'}</small></button>`;
+  }).join('')}</div>` : '') +
+    (loose.length ? `<h2>Без раздела</h2><div class="card list">${loose.map(x => docItem(x, sub(x))).join('')}</div>` : '') +
+    (!secs.length && !loose.length ? '<div class="card empty">Документов пока нет.</div>' : '');
 }
+function dirBack() { if (BACK[BACK.length - 1] === 'docs') BACK.pop(); go('docs', undefined, true); }
 
 // ---- Telegram Mini App: кнопка «Назад», тема Telegram, ссылки в браузере, свои диалоги, данные в облаке Telegram
 function tgInit() {
@@ -1951,7 +1985,10 @@ async function moveImport(code) {
   META.docs.forEach(d => d.stems = new Set(tokens(d.name)));
   const n = META.docs.length;
   $('homeSub').textContent = n ? `${n} ${plural(n, 'документ', 'документа', 'документов')} в базе` : 'Документов пока нет.';
-  $('tileDocs').textContent = n ? `${n} ${plural(n, 'файл', 'файла', 'файлов')} по разделам` : 'пока пусто';
+  const dn = dirSecs().length;
+  $('tileDocs').textContent = dn ? `${dn} ${plural(dn, 'папка', 'папки', 'папок')} · ${n} ${plural(n, 'файл', 'файла', 'файлов')}` : n ? `${n} ${plural(n, 'файл', 'файла', 'файлов')}` : 'пока пусто';
+  marksMoved();
+  if (VIEW === 'docs') renderDocs();
   renderMore();
   if (UI.offline && UI.offline !== META.v) offlineAll();   // сайт пересобран: обновляем скачанное для работы без сети
   const fromHash = () => {   // ссылкой на поиск можно поделиться: адрес хранит запрос
