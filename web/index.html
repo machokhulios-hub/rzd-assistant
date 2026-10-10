@@ -490,8 +490,8 @@ html.big{zoom:1.15}
 
   <!-- Калькулятор: отдых в бригаднике, справка ВУ-45 -->
   <section class="view" id="v-calc">
-    <h1>Калькулятор</h1><p class="sub" id="calcSub"></p>
-    <div class="seg"><button id="cm-rest" onclick="calcMode('rest')">Бригадник</button><button id="cm-vu" onclick="calcMode('vu')">ВУ-45</button><button id="cm-shoe" onclick="calcMode('shoe')">Башмаки</button></div>
+    <h1 id="calcH">Расчёты</h1><p class="sub" id="calcSub"></p>
+    <div class="seg" id="calcSeg"><button id="cm-rest" onclick="calcMode('rest')">Бригадник</button><button id="cm-vu" onclick="calcMode('vu')">ВУ-45</button><button id="cm-shoe" onclick="calcMode('shoe')">Башмаки</button></div>
 
     <div id="c-rest">
       <div class="card form">
@@ -727,7 +727,7 @@ function go(view, arg, back) {
   window.scrollTo(0, 0);
   if (view === 'search' && !$('q').value) $('q').focus();
   if (view === 'hours') loadHours();
-  if (view === 'calc') calcMode(arg);
+  if (view === 'calc') calcMode(arg, arg !== undefined);
   if (view === 'docs') renderDocs(arg);
   if (view === 'dates') renderDates();
   if (view === 'quiz') quizLoad();
@@ -901,8 +901,10 @@ const int = v => Math.max(0, Math.floor(parseFloat(String(v).replace(',', '.')) 
 let CM = load('calcMode', {m: 'rest'}).m;
 if (!CALC_SUB[CM]) CM = 'rest';
 
-function calcMode(m) {
+const CALC_NAME = {rest: 'Бригадник', vu: 'ВУ-45', shoe: 'Башмаки'};
+function calcMode(m, solo) {   // solo - открыт плиткой: только этот расчёт, без переключателя
   if (CALC_SUB[m]) { CM = m; save('calcMode', {m}); }
+  if (solo !== undefined) { $('calcSeg').style.display = solo ? 'none' : ''; $('calcH').textContent = solo ? CALC_NAME[CM] : 'Расчёты'; }
   Object.keys(CALC_SUB).forEach(k => { $('cm-' + k).classList.toggle('on', k === CM); $('c-' + k).style.display = k === CM ? '' : 'none'; });
   $('calcSub').textContent = CALC_SUB[CM];
   ({rest: crRender, vu: vuRender, shoe: shRender})[CM]();
