@@ -323,6 +323,8 @@ html.big{zoom:1.15}
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2 2.5h8.4A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol>
   <symbol id="i-rows" viewBox="0 0 24 24"><path d="M8.5 6h12M8.5 12h12M8.5 18h12M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 3.5h3.5l1.8 4.5-2.3 1.4a11 11 0 0 0 6.6 6.6l1.4-2.3 4.5 1.8V19a1.5 1.5 0 0 1-1.5 1.5A16.5 16.5 0 0 1 3.5 5 1.5 1.5 0 0 1 5 3.5z"/></symbol>
+  <symbol id="i-test" viewBox="0 0 24 24"><rect x="4.5" y="3" width="15" height="18.5" rx="2.5"/><path d="m8 8.5 1.5 1.5 2.5-3M14 8.5h2.5M8 15l1.5 1.5 2.5-3M14 15h2.5"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/></symbol>
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11 12 3.5l8.5 7.5V20a1.5 1.5 0 0 1-1.5 1.5h-4.5v-6h-5v6H5A1.5 1.5 0 0 1 3.5 20z"/></symbol>
   <symbol id="i-news" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M7.5 9h5M7.5 12.5h9M7.5 16h9"/></symbol>
@@ -361,21 +363,28 @@ html.big{zoom:1.15}
     <div>
       <h2>Разделы</h2>
       <div class="tiles">
-        <button class="card tile" style="--c:var(--green)" onclick="go('hours')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Учёт часов</b><small id="tileHours">поездки, отдых, итог за месяц</small></button>
-        <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><b>Документы</b><small id="tileDocs">все файлы по разделам</small></button>
-        <button class="card tile" style="--c:var(--cyan)" onclick="go('calc','rest')"><span class="badge"><svg><use href="#i-calc"/></svg></span><b>Бригадник</b><small>отдых и время подъёма</small></button>
-        <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><b>ВУ-45</b><small>нажатие колодок</small></button>
-        <button class="card tile" style="--c:var(--red)" onclick="go('calc','shoe')"><span class="badge"><svg><use href="#i-pin"/></svg></span><b>Башмаки</b><small>закрепление на перегоне</small></button>
-        <button class="card tile" style="--c:var(--violet)" onclick="go('quiz')"><span class="badge"><svg><use href="#i-q"/></svg></span><b>Билеты</b><small id="tileQuiz">нестандартные ситуации</small></button>
-        <button class="card tile" style="--c:var(--green)" onclick="go('dates')"><span class="badge"><svg><use href="#i-bell"/></svg></span><b>Сроки</b><small id="tileDates">медкомиссия, экзамены</small></button>
+        <!-- два столбца: плитки идут парами слева направо -->
+        <button class="card tile" style="--c:var(--red)" onclick="go('soon','news')"><span class="badge"><svg><use href="#i-news"/></svg></span><b>Новости РЖД</b><small>раздел готовится</small></button>
         <button class="card tile" style="--c:var(--cyan)" onclick="go('train')"><span class="badge"><svg><use href="#i-train"/></svg></span><b>Электрички</b><small id="tileTrain">расписание</small></button>
+        <button class="card tile" style="--c:var(--green)" onclick="go('soon','phones')"><span class="badge"><svg><use href="#i-phone"/></svg></span><b>Телефоны</b><small>раздел готовится</small></button>
+        <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><b>Документы</b><small id="tileDocs">все файлы по разделам</small></button>
+        <button class="card tile" style="--c:var(--amber)" onclick="go('soon','tests')"><span class="badge"><svg><use href="#i-test"/></svg></span><b>Тесты</b><small>раздел готовится</small></button>
+        <button class="card tile" style="--c:var(--violet)" onclick="go('quiz')"><span class="badge"><svg><use href="#i-q"/></svg></span><b>Билеты</b><small id="tileQuiz">нестандартные ситуации</small></button>
+        <button class="card tile" style="--c:var(--cyan)" onclick="go('calc','rest')"><span class="badge"><svg><use href="#i-calc"/></svg></span><b>Бригадник</b><small>отдых и время подъёма</small></button>
+        <button class="card tile" style="--c:var(--green)" onclick="go('hours')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Учёт часов</b><small id="tileHours">поездки, отдых, итог за месяц</small></button>
+        <button class="card tile" style="--c:var(--red)" onclick="go('calc','shoe')"><span class="badge"><svg><use href="#i-pin"/></svg></span><b>Башмаки</b><small>закрепление на перегоне</small></button>
+        <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><b>ВУ-45</b><small>нажатие колодок</small></button>
         <button class="card tile" style="--c:var(--blue)" onclick="go('tools','calc')"><span class="badge"><svg><use href="#i-math"/></svg></span><b>Калькулятор</b><small>проценты, история</small></button>
-        <button class="card tile" style="--c:var(--amber)" onclick="go('tools','timer')"><span class="badge"><svg><use href="#i-timer"/></svg></span><b>Таймер</b><small id="tileTimer">обратный отсчёт</small></button>
-        <button class="card tile" style="--c:var(--violet)" onclick="go('tools','clock')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Часы</b><small id="tileClock">местное и московское время</small></button>
-        <button class="card tile" style="--c:var(--green)" onclick="go('vac')"><span class="badge"><svg><use href="#i-cal"/></svg></span><b>Отпуск</b><small id="tileVac">дни отпуска и дата выхода</small></button>
+        <button class="card tile" style="--c:var(--violet)" onclick="go('tools','timer')"><span class="badge"><svg><use href="#i-timer"/></svg></span><b>Таймер</b><small id="tileTimer">обратный отсчёт</small></button>
       </div>
 
     </div>
+  </section>
+
+  <!-- Разделы, которые ещё не готовы: Новости РЖД, Телефоны, Тесты -->
+  <section class="view" id="v-soon">
+    <h1 id="soonH"></h1><p class="sub" id="soonSub"></p>
+    <div class="card empty">Раздел готовится. Материалы появятся позже.</div>
   </section>
 
   <!-- Календарь отпуска -->
@@ -633,6 +642,12 @@ html.big{zoom:1.15}
   <section class="view" id="v-more">
     <h1>Настройки</h1><p class="sub">Вид страницы и работа без интернета.</p>
     <div class="card list" id="uiList"></div>
+    <h2>Другие разделы</h2>
+    <div class="card list">
+      <button class="item" onclick="go('dates')"><span class="badge" style="--c:var(--green)"><svg><use href="#i-bell"/></svg></span><span><b>Сроки</b><small id="tileDates">медкомиссия, экзамены</small></span><span class="go"><svg><use href="#i-chev"/></svg></span></button>
+      <button class="item" onclick="go('vac')"><span class="badge" style="--c:var(--violet)"><svg><use href="#i-cal"/></svg></span><span><b>Отпуск</b><small id="tileVac">дни отпуска и дата выхода</small></span><span class="go"><svg><use href="#i-chev"/></svg></span></button>
+      <button class="item" onclick="go('tools','clock')"><span class="badge" style="--c:var(--cyan)"><svg><use href="#i-clock"/></svg></span><span><b>Часы</b><small id="tileClock">местное и московское время</small></span><span class="go"><svg><use href="#i-chev"/></svg></span></button>
+    </div>
     <h2>Без интернета</h2>
     <div class="card form">
       <div class="pre" id="offText"></div>
@@ -683,7 +698,7 @@ const ic = n => `<svg><use href="#i-${n}"/></svg>`;
 
 let TG = null;   // Telegram.WebApp, когда страница открыта как Mini App в Telegram
 
-const NAV = {quiz: 'home', dates: 'home', train: 'home', tools: 'home', vac: 'home'};   // страницы без своей кнопки в нижнем меню
+const NAV = {quiz: 'home', dates: 'more', train: 'home', tools: 'home', vac: 'more', soon: 'home'};   // страницы без своей кнопки в нижнем меню
 let VIEW = 'home', BACK = [];   // BACK - пройденные разделы для кнопки «Назад» в Telegram
 function go(view, arg, back) {
   if (view === 'home') BACK = [];
@@ -692,7 +707,7 @@ function go(view, arg, back) {
   if (TG) TG.BackButton[view === 'home' ? 'hide' : 'show']();
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === (NAV[view] || view)));
-  $('gear').classList.toggle('on', view === 'more');
+  $('gear').classList.toggle('on', (NAV[view] || view) === 'more');
   document.body.classList.toggle('docked', view === 'search');
   window.scrollTo(0, 0);
   if (view === 'search' && !$('q').value) $('q').focus();
@@ -705,7 +720,11 @@ function go(view, arg, back) {
   if (view === 'train') trainRender();
   if (view === 'tools') toolsMode(arg);
   if (view === 'vac') vacRender();
+  if (view === 'soon') soonRender(arg);
 }
+
+const SOON = {news: ['Новости РЖД', 'Новости компании и дороги.'], phones: ['Телефоны', 'Справочник нужных номеров.'], tests: ['Тесты', 'Проверка знаний.']};
+function soonRender(k) { const [h, sub] = SOON[k] || SOON.news; $('soonH').textContent = h; $('soonSub').textContent = sub; }
 
 // ---- учёт часов
 const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
