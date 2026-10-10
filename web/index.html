@@ -635,6 +635,9 @@ html.big{zoom:1.15}
         <div class="prog" style="margin-bottom:0"><i id="tmBar"></i></div></div>
       <div class="btns" id="tmBtns"></div>
       <div class="chips" id="tmPre"></div>
+      <div id="tmTripBox" hidden><h2>Поездка</h2><div class="card list" id="tmTrip"></div></div>
+      <h2>Выдержки по Правилам № 151</h2>
+      <div class="card list" id="tmNorm"></div>
       <div class="card form" id="tmSetBox" style="margin-top:12px">
         <div class="three">
           <label>Часы<input class="inp" id="tmH" inputmode="numeric" maxlength="2" placeholder="0" oninput="tmSet('h',this.value)"></label>
@@ -644,7 +647,7 @@ html.big{zoom:1.15}
         <div class="err" id="tmErr"></div>
         <button type="button" class="tog" id="tmWakeBtn" onclick="tmSet('wake',!TMR.wake)"><span class="sw" id="tmWakeSw"></span>Не гасить экран, пока идёт таймер или секундомер</button>
       </div>
-      <p class="note">Таймер продолжает идти, если перейти в другой раздел или закрыть страницу. Сигнал звучит, только пока сайт открыт на экране: если экран погас или открыто другое приложение, вы увидите, что время вышло, когда вернётесь. На iPhone в беззвучном режиме звука может не быть.</p>
+      <p class="note">Выдержки - по Правилам эксплуатации тормозов № 151: нажмите строку, чтобы запустить таймер, «стр.» - открыть Правила на этой странице. «Поездка» - по незавершённой поездке из «Учёта часов» и отдыху из «Бригадника». Таймер продолжает идти, если перейти в другой раздел или закрыть страницу. Сигнал звучит, только пока сайт открыт на экране: если экран погас или открыто другое приложение, вы увидите, что время вышло, когда вернётесь. На iPhone в беззвучном режиме звука может не быть.</p>
       </div>
     </div>
   </section>
@@ -1434,13 +1437,17 @@ function clkTick(now) {
 }
 const dur = ms => { const m = Math.max(0, Math.floor(ms / 60000)); return `${Math.floor(m / 60)} ч ${p2(m % 60)} мин`; };
 const hmD = (d, now) => `${p2(d.getHours())}:${p2(d.getMinutes())}` + (d.toDateString() !== now.toDateString() ? ` (${p2(d.getDate())}.${p2(d.getMonth() + 1)})` : '');
+function tripPlan(t) {   // незавершённая поездка: явка, а если в Бригаднике та же явка - начало отдыха, подъём и самая ранняя явка
+  const a = new Date(t.start), pl = crPlan(), same = !!pl && t.start.slice(11, 16) === CR.a;
+  const rs = same && new Date(+a + (pl.work + pl.gap) * 60000), re = same && new Date(+rs + pl.rest * 60000), wake = same && new Date(+re - int(CR.wake) * 60000);
+  return {a, same, rs, re, wake};
+}
 function clkTrip(now) {   // незавершённая поездка из учёта часов и отдых из Бригадника - живой отсчёт
   $('clkTrip').dataset.k = '1';
   const t = crOpen(), row = (k, v, w) => `<div class="kv"><span>${k}</span><b${w ? ' style="color:var(--amber)"' : ''}>${v}</b></div>`;
   let h = '';
   if (t) {
-    const a = new Date(t.start), pl = crPlan(), same = pl && t.start.slice(11, 16) === CR.a;
-    const rs = same && new Date(+a + (pl.work + pl.gap) * 60000), re = same && new Date(+rs + pl.rest * 60000), wake = same && new Date(+re - int(CR.wake) * 60000);
+    const {a, same, rs, re, wake} = tripPlan(t);
     const work = (from, label) => {   // работа с момента from: сколько уже и когда истекут 12 часов
       const on = now - from, lim = new Date(+from + MAX_CONT * 60000);
       return row(label, dur(on)) + (on < MAX_CONT * 60000 ? row(`12 часов непрерывной работы - в ${hmD(lim, now)}`, `через ${dur(lim - now)}`)
@@ -1469,9 +1476,16 @@ const tmState = () => TMR.end ? 'run' : TMR.done ? 'done' : TMR.dur ? 'pause' : 
 const tmLeft = () => ({run: Math.max(0, TMR.end - Date.now()), done: 0, pause: TMR.left})[tmState()] ?? tmInput();
 const tmFmt = ms => { const s = Math.ceil(ms / 1000), h = Math.floor(s / 3600); return (h ? h + ':' : '') + p2(Math.floor(s / 60) % 60) + ':' + p2(s % 60); };
 const tmAt = ts => { const d = new Date(ts); return `${p2(d.getHours())}:${p2(d.getMinutes())}` + (d.toDateString() !== new Date().toDateString() ? ` ${p2(d.getDate())}.${p2(d.getMonth() + 1)}` : ''); };
+// выдержки при проверке тормозов - Правила эксплуатации тормозов № 151 (страница - в PDF)
+const TM_NORM = [
+  [60, 'Плотность тормозной магистрали - 1 мин', 'Через 20 с после отключения питания: снижение не больше 0,02 МПа за 1 мин', 82],
+  [150, 'Плотность тормозной магистрали - 2,5 мин', 'Через 20 с после отключения питания: снижение не больше 0,05 МПа за 2,5 мин', 82],
+  [180, 'Плотность уравнительного резервуара - 3 мин', 'Снижение не больше 0,01 МПа за 3 мин, завышение не допускается', 43],
+  [300, 'Без самопроизвольного отпуска - 5 мин', 'Ступень торможения: воздухораспределители не должны отпустить за 5 мин', 45],
+  [600, 'Выдержка при полном опробовании - 10 мин', 'Перед затяжными спусками 0,018 и круче, отметка «В10» в справке ВУ-45', 83]];
 const TM_PRE = [[60, '1 мин'], [180, '3 мин'], [300, '5 мин'], [600, '10 мин'], [900, '15 мин'], [1800, '30 мин'], [3600, '1 час']];
 $('tmPre').innerHTML = TM_PRE.map(([s, t]) => `<button class="chip" onclick="tmPreset(${s})">${t}</button>`).join('');
-function tmSet(key, value) { TMR[key] = value; save('timer', TMR); if (key === 'wake') { wakeSet(); tmRender(); } else { $('tmErr').textContent = ''; tmTick(); } }
+function tmSet(key, value) { TMR[key] = value; if (key !== 'wake') TMR.what = ''; save('timer', TMR); if (key === 'wake') { wakeSet(); tmRender(); } else { $('tmErr').textContent = ''; tmTick(); } }
 function tmStart() {
   audioOn(); stopRing();
   if (tmState() === 'pause') TMR.end = Date.now() + TMR.left;
@@ -1484,14 +1498,40 @@ function tmStart() {
   save('timer', TMR); wakeSet(); tmRender();
 }
 function tmPause() { TMR.left = Math.max(0, TMR.end - Date.now()); TMR.end = 0; save('timer', TMR); wakeSet(); tmRender(); }
-function tmReset() { stopRing(); Object.assign(TMR, {dur: 0, end: 0, left: 0, done: 0}); save('timer', TMR); wakeSet(); tmRender(); }
+function tmReset() { stopRing(); Object.assign(TMR, {dur: 0, end: 0, left: 0, done: 0, what: ''}); save('timer', TMR); wakeSet(); tmRender(); }
 function tmAdd() { TMR.dur += 60000; if (TMR.end) TMR.end += 60000; else TMR.left += 60000; save('timer', TMR); tmTick(); }
-function tmPreset(sec) {
-  Object.assign(TMR, {h: String(Math.floor(sec / 3600) || ''), m: String(Math.floor(sec / 60) % 60), s: String(sec % 60 || ''), dur: 0, end: 0, left: 0, done: 0});
+function tmPreset(sec, what) {
+  Object.assign(TMR, {h: String(Math.floor(sec / 3600) || ''), m: String(Math.floor(sec / 60) % 60), s: String(sec % 60 || ''), dur: 0, end: 0, left: 0, done: 0, what: what || ''});
   tmStart();
+}
+function tmNorm(i) { const [sec, t, hint] = TM_NORM[i]; tmPreset(sec, `${t}. ${hint}`); }
+function tmTo(ts, what) {   // до заданного момента: подъём, явка
+  const d = ts - Date.now();
+  if (d < 1000) return;
+  audioOn(); stopRing();
+  Object.assign(TMR, {h: String(Math.floor(d / 3600e3) || ''), m: String(Math.floor(d / 60e3) % 60), s: '', dur: d, end: ts, left: 0, done: 0, what});
+  save('timer', TMR); wakeSet(); tmRender();
+}
+function tmLists() {   // выдержки по Правилам и время из поездки (Учёт часов + Бригадник)
+  const doc = META && META.docs.find(x => DOC_USE[0].re.test(x.file));
+  $('tmNorm').innerHTML = TM_NORM.map(([sec, t, hint, pg], i) => `<div class="item"><button style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;text-align:left" onclick="tmNorm(${i})">
+    <span class="badge" style="--c:var(--amber)">${ic('timer')}</span><span style="min-width:0"><b style="white-space:normal">${t}</b><small>${hint}</small></span></button>
+    ${doc ? `<a class="go" href="${fileUrl(doc, pg)}" target="_blank" rel="noopener" aria-label="Открыть Правила, стр. ${pg}" style="font-size:12px;font-weight:700;color:var(--blue);text-decoration:none;white-space:nowrap">стр. ${pg}</a>` : ''}</div>`).join('');
+  const t = crOpen(), now = new Date(), rows = [];
+  if (t) {
+    const {a, same, rs, re, wake} = tripPlan(t), resting = same && now >= rs && now < re;
+    const lim = new Date(+(same && now >= re ? re : a) + MAX_CONT * 60000);   // 12 часов - от явки, а после отдыха - от явки из бригадника
+    if (same && now < wake) rows.push([+wake, `До подъёма в ${hmD(wake, now)}`, 'Подъём в бригаднике', 'из Бригадника']);
+    if (same && now < re) rows.push([+re, `До явки в ${hmD(re, now)}`, 'Явка из бригадника не раньше этого времени', 'из Бригадника']);
+    if (now >= a && !resting && now < lim) rows.push([+lim, `До 12 часов непрерывной работы - ${hmD(lim, now)}`, 'Непрерывная работа - не больше 12 часов', 'из Учёта часов']);
+  }
+  $('tmTripBox').hidden = !rows.length;
+  $('tmTrip').innerHTML = rows.map(([ts, title, what, src]) => `<button class="item dir" data-w="${esc(what)}" onclick="tmTo(${ts},this.dataset.w)"><span class="badge" style="--c:var(--blue)">${ic('clock')}</span>
+    <span><b>${title}</b><small>${src} · поставить таймер</small></span><span class="go">${ic('chev')}</span></button>`).join('');
 }
 function tmRender() {
   const st = tmState();
+  tmLists();
   $('tmH').value = TMR.h; $('tmM').value = TMR.m; $('tmS').value = TMR.s;
   $('tmSetBox').style.display = st === 'idle' || st === 'done' ? '' : 'none';
   $('tmWakeBtn').style.display = 'wakeLock' in navigator ? '' : 'none';
@@ -1507,7 +1547,8 @@ function tmTick() {
   const st = tmState(), left = tmLeft();
   $('tmBig').textContent = tmFmt(left);
   $('tmBar').style.width = (TMR.dur ? left / TMR.dur * 100 : 100) + '%';
-  $('tmState').textContent = {run: `сработает в ${tmAt(TMR.end)}`, pause: 'на паузе', done: `время вышло в ${tmAt(TMR.done)}`, idle: 'выберите время и нажмите «Старт»'}[st];
+  $('tmState').textContent = {run: `сработает в ${tmAt(TMR.end)}`, pause: 'на паузе', done: `время вышло в ${tmAt(TMR.done)}`, idle: 'выберите время и нажмите «Старт»'}[st]
+    + (TMR.what && st !== 'idle' ? `. ${TMR.what}` : '');
 }
 function tmTile() {
   const st = tmState();
