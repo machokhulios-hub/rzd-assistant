@@ -236,6 +236,12 @@ nav button.on{color:var(--text)}nav button.on svg{color:var(--red)}
 .field{align-items:center}
 .field input{flex:1;min-width:0;height:44px;background:none;border:0;outline:0;-webkit-appearance:none;appearance:none}
 .field input::-webkit-search-cancel-button{display:none}
+/* крестик в поле, где стоит курсор: очищает его одним нажатием */
+.xhost{position:relative}
+.xclr{position:absolute;z-index:2;width:32px;height:32px;border-radius:50%;display:none;place-items:center;font-size:18px;color:var(--muted)}
+.xclr.on{display:grid}
+.xclr:hover{color:var(--text);background:var(--card2)}
+.xpad{padding-right:40px!important}
 a.doclink[href]{color:var(--blue);font-weight:700;text-decoration:none}
 .found{margin-top:0}
 .dock{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:29;padding:10px 0;display:none;
@@ -389,6 +395,7 @@ html.big{zoom:1.15}
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></symbol>
   <symbol id="i-math" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 9h4M9 7v4M13.5 9h4M7.3 14.3l3.4 3.4M10.7 14.3l-3.4 3.4M13.5 14.5h4M13.5 17.5h4"/></symbol>
   <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 2.5v4M16 2.5v4M8 13.5h.01M12 13.5h.01M16 13.5h.01M8 17h.01M12 17h.01"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></symbol>
   <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="8"/><path d="M12 9.5v4l2.5 1.5M9.5 2.5h5M12 2.5v3M19 6.5l1.5-1.5"/></symbol>
 </svg>
 
@@ -2462,6 +2469,36 @@ function renderMarks() {
 const vv = window.visualViewport;
 function dockPos() { const kb = vv ? innerHeight - vv.height - vv.offsetTop : 0; $('dock').style.bottom = kb > 80 ? kb / (UI.big ? 1.15 : 1) + 'px' : ''; }
 if (vv) { vv.addEventListener('resize', dockPos); vv.addEventListener('scroll', dockPos); }
+
+// крестик в поле, где стоит курсор: виден, пока в поле есть текст
+const XC = Object.assign(document.createElement('button'), {type: 'button', className: 'xclr', tabIndex: -1, innerHTML: ic('x')});
+XC.setAttribute('aria-label', 'Очистить поле');
+let XI = null;   // поле, к которому сейчас привязан крестик
+const xOk = el => (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' && /^(text|search)$/.test(el.type)) && !el.readOnly && el.offsetWidth >= 110;   // в узкие ячейки крестик не влезает
+function xPos() {
+  const el = XI, on = !!el && el.isConnected && document.activeElement === el && !!el.value;
+  XC.classList.toggle('on', on);
+  if (el) el.classList.toggle('xpad', on);
+  if (!on) return;
+  const p = el.parentNode;
+  if (XC.parentNode !== p) { p.classList.add('xhost'); p.appendChild(XC); }
+  XC.style.left = el.offsetLeft + el.offsetWidth - 38 + 'px';
+  XC.style.top = el.offsetTop + (el.tagName === 'TEXTAREA' ? 6 : (el.offsetHeight - 32) / 2) + 'px';
+}
+document.addEventListener('focusin', e => { if (XI && XI !== e.target) XI.classList.remove('xpad'); XI = xOk(e.target) ? e.target : null; xPos(); });
+document.addEventListener('focusout', () => setTimeout(xPos));
+document.addEventListener('input', xPos);
+addEventListener('resize', xPos);
+XC.addEventListener('mousedown', e => e.preventDefault());   // нажатие не уводит курсор из поля
+XC.onclick = () => {
+  const el = XI;
+  if (!el) return;
+  el.value = '';
+  el.dispatchEvent(new Event('input', {bubbles: true}));   // пересчёты и сохранение - как при ручном стирании
+  el.dispatchEvent(new Event('change', {bubbles: true}));
+  el.focus();
+  xPos();
+};
 
 // ---- документы: папки плитками (папка в documents/ = раздел), внутри папки - список файлов
 const DIR_C = ['blue', 'cyan', 'green', 'amber', 'violet', 'red'];
