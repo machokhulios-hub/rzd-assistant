@@ -157,9 +157,10 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 /* нижнее меню, шторка, скелетон */
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--glass);backdrop-filter:blur(16px);border-top:1px solid var(--line);
   padding-bottom:env(safe-area-inset-bottom)}
-nav .wrap{display:grid;grid-template-columns:repeat(5,1fr);height:64px;padding:0 6px}
-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted)}
+nav .wrap{display:grid;grid-template-columns:repeat(6,1fr);height:64px;padding:0 4px}
+nav button{min-width:0;white-space:nowrap;letter-spacing:-.01em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted)}
 nav button svg{font-size:23px}
+@media(max-width:380px){nav button{font-size:10px}}
 nav button.on{color:var(--text)}nav button.on svg{color:var(--red)}
 .sk{border-radius:12px;background:linear-gradient(90deg,var(--card2) 25%,#2a2f38 37%,var(--card2) 63%);background-size:400% 100%;animation:sk 1.2s infinite}
 @keyframes sk{from{background-position:100% 0}to{background-position:0 0}}
@@ -244,7 +245,7 @@ html.light .sk{background:linear-gradient(90deg,var(--card2) 25%,#e2e5ea 37%,var
 html.big{zoom:1.15}
 </style>
 </head>
-<body class="docked">
+<body>
 <svg style="display:none">
   <symbol id="i-train" viewBox="0 0 24 24"><rect x="5" y="2.5" width="14" height="14.5" rx="3.5"/><path d="M5 9.5h14M8 17l-2.5 4.5M16 17l2.5 4.5M2.5 21.5h19"/><circle cx="9" cy="13.4" r=".6" fill="currentColor"/><circle cx="15" cy="13.4" r=".6" fill="currentColor"/></symbol>
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19"/><ellipse cx="12" cy="12" rx="4.4" ry="9.5"/></symbol>
@@ -278,18 +279,12 @@ html.big{zoom:1.15}
 </div></header>
 
 <main class="wrap">
-  <!-- Главная: поиск по документам -->
+  <!-- Главная: разделы -->
   <section class="view on" id="v-home">
     <h1>Нормативка под рукой</h1>
-    <p class="sub" id="homeSub">Поиск по словам в документах и расчёты для смены.</p>
-    <div class="found" id="found"></div>
+    <p class="sub" id="homeSub">Поиск по документам и расчёты для смены.</p>
 
-    <div id="sections">
-      <details class="fold" data-fold="marks" id="marksBox" style="display:none">
-        <summary>Закладки <span id="marksN"></span><svg><use href="#i-chev"/></svg></summary>
-        <div id="marks"></div>
-      </details>
-
+    <div>
       <h2>Разделы</h2>
       <div class="tiles">
         <button class="card tile" style="--c:var(--green)" onclick="go('hours')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Учёт часов</b><small id="tileHours">поездки, отдых, итог за месяц</small></button>
@@ -311,6 +306,19 @@ html.big{zoom:1.15}
           <div id="vacOut"></div>
         </div>
         <p class="note">Нерабочие праздничные дни, попавшие в отпуск, в число дней отпуска не входят (статья 120 Трудового кодекса). Переносы выходных по производственному календарю не учитываются.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Поиск по документам: результаты сверху, строка поиска внизу, как в чате -->
+  <section class="view" id="v-search">
+    <h1>Поиск</h1>
+    <p class="sub">Слова ищу во всех формах: «поезд» найдёт и «поезда», и «поездом».</p>
+    <div class="found" id="found"></div>
+    <div id="sections">
+      <details class="fold" data-fold="marks" id="marksBox" style="display:none">
+        <summary>Закладки <span id="marksN"></span><svg><use href="#i-chev"/></svg></summary>
+        <div id="marks"></div>
       </details>
     </div>
   </section>
@@ -501,7 +509,7 @@ html.big{zoom:1.15}
   </section>
 </main>
 
-<!-- строка поиска: закреплена внизу над меню, видна только на главной -->
+<!-- строка поиска: закреплена внизу над меню, видна только в разделе «Поиск» -->
 <div class="dock" id="dock"><div class="wrap">
   <div class="chips" id="recent"></div>
   <form class="field" onsubmit="event.preventDefault();find($('q').value)">
@@ -512,6 +520,7 @@ html.big{zoom:1.15}
 
 <nav><div class="wrap">
   <button class="on" data-v="home" onclick="go('home')"><svg><use href="#i-home"/></svg>Главная</button>
+  <button data-v="search" onclick="go('search')"><svg><use href="#i-search"/></svg>Поиск</button>
   <button data-v="hours" onclick="go('hours')"><svg><use href="#i-clock"/></svg>Часы</button>
   <button data-v="calc" onclick="go('calc')"><svg><use href="#i-calc"/></svg>Расчёты</button>
   <button data-v="docs" onclick="go('docs')"><svg><use href="#i-doc"/></svg>Документы</button>
@@ -527,8 +536,9 @@ const NAV = {quiz: 'more', dates: 'more'};   // страницы без свое
 function go(view, arg) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === (NAV[view] || view)));
-  document.body.classList.toggle('docked', view === 'home');
+  document.body.classList.toggle('docked', view === 'search');
   window.scrollTo(0, 0);
+  if (view === 'search' && !$('q').value) $('q').focus();
   if (view === 'hours') loadHours();
   if (view === 'calc') calcMode(arg);
   if (view === 'docs') renderDocs();
@@ -989,7 +999,7 @@ function quizRender() {
   $('quizSub').textContent = `Действия в нестандартных ситуациях: грузовое движение, электротяга. Отмечено «знаю»: ${known} из ${total}.`;
   $('quiz').innerHTML = t.q.map((q, i) => { const key = `${t.n}.${i + 1}`; return `<div class="card qz"><p><b>${i + 1}.</b> ${esc(q)}</p>
     <div class="row2"><button onclick="quizMark('${key}')"><span class="sw ${QZ.done[key] ? 'on' : ''}"></span>Знаю</button>
-      <button class="linkbtn" data-q="${esc(q)}" onclick="go('home');find(this.dataset.q)">Найти в документах</button></div></div>`; }).join('');
+      <button class="linkbtn" data-q="${esc(q)}" onclick="go('search');find(this.dataset.q)">Найти в документах</button></div></div>`; }).join('');
   quizTile();
 }
 function quizTile() { const n = Object.keys(QZ.done).length; $('tileQuiz').textContent = n ? `отмечено «знаю»: ${n}` : 'нестандартные ситуации'; }
@@ -1303,14 +1313,14 @@ function renderDocs() {
   STOP = new Set(META.stop);
   META.docs.forEach(d => d.stems = new Set(tokens(d.name)));
   const n = META.docs.length;
-  $('homeSub').textContent = n ? `${n} ${plural(n, 'документ', 'документа', 'документов')} в базе, слова ищу во всех формах` : 'Документов пока нет.';
+  $('homeSub').textContent = n ? `${n} ${plural(n, 'документ', 'документа', 'документов')} в базе` : 'Документов пока нет.';
   $('tileDocs').textContent = n ? `${n} ${plural(n, 'файл', 'файла', 'файлов')} по разделам` : 'пока пусто';
   renderMore();
   if (UI.offline && UI.offline !== META.v) offlineAll();   // сайт пересобран: обновляем скачанное для работы без сети
   const fromHash = () => {   // ссылкой на поиск можно поделиться: адрес хранит запрос
     let q = '';
     try { q = decodeURIComponent((/^#q=(.*)$/.exec(location.hash) || [])[1] || ''); } catch (e) {}
-    if (q !== $('q').value.trim()) { go('home'); find(q); }
+    if (q !== $('q').value.trim()) { go('search'); find(q); }
   };
   addEventListener('hashchange', fromHash);
   fromHash();
