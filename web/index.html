@@ -623,6 +623,15 @@ html.big{zoom:1.15}
       <div class="pre" id="offText"></div>
       <button class="btn" id="offBtn" onclick="offlineAll()">Скачать всё для работы без сети</button>
     </div>
+    <h2>Перенос данных</h2>
+    <div class="card form">
+      <div class="pre">Поездки, сроки, отпуск, закладки, отметки билетов и расчёты можно перенести из браузера в Telegram и обратно или на другой телефон: скопируйте код здесь и вставьте его там, где нужны данные.</div>
+      <div class="two keep"><button type="button" class="btn" onclick="moveCopy()">Скопировать код</button><button type="button" class="btn2" onclick="moveFile()">Сохранить в файл</button></div>
+      <label>Код с другого устройства<textarea class="inp" id="moveIn" rows="3" autocomplete="off" spellcheck="false" placeholder="вставьте код" style="resize:vertical;word-break:break-all"></textarea></label>
+      <div class="two keep"><button type="button" class="btn" onclick="moveImport($('moveIn').value)">Перенести</button><button type="button" class="btn2" onclick="$('moveF').click()">Загрузить файл</button></div>
+      <input type="file" id="moveF" accept=".txt,text/plain" hidden onchange="moveLoad(this)">
+      <div class="pre" id="moveText"></div>
+    </div>
     <div id="tgBox" style="display:none">
       <h2>Telegram</h2>
       <div class="card list"><div class="item"><span class="badge" style="--c:var(--blue)"><svg><use href="#i-cloud"/></svg></span><span><b>Данные в облаке Telegram</b><small id="tgSync">поездки, сроки, отпуск, закладки и расчёты видны на всех ваших устройствах с Telegram</small></span></div>
@@ -1784,14 +1793,16 @@ async function tgShareCsv(text, name, rows) {   // файл - через «По�
   const file = new File([text], name, {type: 'text/csv'});
   try { if (navigator.canShare && navigator.canShare({files: [file]})) return await navigator.share({files: [file], title: name}); }
   catch (e) { if (e.name === 'AbortError') return; }
-  const tsv = rows.map(r => r.map(v => String(v || '').replace(/\s+/g, ' ')).join('\t')).join('\n');
-  let ok = false;
-  try { await navigator.clipboard.writeText(tsv); ok = true; } catch (e) {
-    const t = document.createElement('textarea'); t.value = tsv; document.body.appendChild(t); t.select();
-    try { ok = document.execCommand('copy'); } catch (e2) {}
-    t.remove();
-  }
+  const ok = await copyText(rows.map(r => r.map(v => String(v || '').replace(/\s+/g, ' ')).join('\t')).join('\n'));
   TG.showAlert(ok ? 'Таблица скопирована. Вставьте её в Excel или Google Таблицы.' : 'Не получилось выгрузить таблицу. Откройте Mini App в Telegram на компьютере.');
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+  const t = document.createElement('textarea'); t.value = text; t.setAttribute('readonly', ''); document.body.appendChild(t); t.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  t.remove();
+  return ok;
 }
 
 // облако Telegram: значение - до 4096 символов, поэтому данные режутся на части. Части пишутся по очереди в два набора (a и b),
@@ -1839,11 +1850,93 @@ async function cloudSync() {   // при запуске: что новее в о
   if (got && !again) location.reload();   // данные с другого устройства: перерисовываем страницу с ними
 }
 
+// ---- перенос данных между браузером и Telegram или на другой телефон: код - сжатые данные текстом, в файле - тот же код
+const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 32768) s += String.fromCharCode(...u8.subarray(i, i + 32768)); return btoa(s); };
+const zip = async (u8, T) => new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new T('deflate-raw'))).arrayBuffer());
+const moveSay = t => { $('moveText').textContent = t; };
+async function moveCode() {
+  const d = {};
+  SYNC.forEach(k => { try { const v = JSON.parse(localStorage.getItem(k)); if (v && typeof v === 'object') d[k] = v; } catch (e) {} });
+  if (!Object.keys(d).length) return null;
+  const u8 = new TextEncoder().encode(JSON.stringify(d));
+  return window.CompressionStream ? 'RZD1:' + b64(await zip(u8, CompressionStream)) : 'RZD0:' + b64(u8);
+}
+async function moveRead(code) {
+  const m = /RZD([01]):([A-Za-z0-9+/=]+)/.exec(code.replace(/\s+/g, ''));
+  if (!m) throw new Error('code');
+  let u8 = Uint8Array.from(atob(m[2]), c => c.charCodeAt(0));
+  if (m[1] === '1') u8 = await zip(u8, DecompressionStream);
+  return JSON.parse(new TextDecoder().decode(u8));
+}
+async function moveCopy() {
+  const code = await moveCode();
+  if (!code) return moveSay('Переносить пока нечего.');
+  if (await copyText(code)) return moveSay(`Код скопирован. Откройте ${TG ? 'сайт в браузере' : 'бота в Telegram'} или другой телефон, зайдите в «Настройки» и вставьте код в поле «Код с другого устройства».`);
+  $('moveIn').value = code; $('moveIn').select();
+  moveSay('Не получилось скопировать: код - в поле выше, выделите его и скопируйте вручную.');
+}
+async function moveFile() {
+  const code = await moveCode();
+  if (!code) return moveSay('Переносить пока нечего.');
+  const name = `rzd-assistant-data-${new Date().toISOString().slice(0, 10)}.txt`;
+  if (TG && /^(ios|android)$/.test(TG.platform)) {   // в Telegram на телефоне файл сохраняется через «Поделиться»
+    const f = new File([code], name, {type: 'text/plain'});
+    try { if (navigator.canShare && navigator.canShare({files: [f]})) return await navigator.share({files: [f], title: name}); }
+    catch (e) { if (e.name === 'AbortError') return; }
+    return moveCopy();
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([code], {type: 'text/plain'}));
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  moveSay('Файл сохранён. На другом устройстве нажмите «Загрузить файл».');
+}
+async function moveLoad(input) {
+  const f = input.files[0]; input.value = '';
+  if (f) moveImport(await f.text());
+}
+function moveMerge(k, a, b) {   // a - что уже есть здесь, b - из кода: списки объединяются, остальное берётся из кода
+  if (!a) return b;
+  const uniq = (list, key) => { const seen = new Set(); return list.filter(x => { const v = key(x); return !seen.has(v) && seen.add(v); }); };
+  const add = (list, more, key, seq) => { const have = new Set(list.map(key)); return list.concat(more.filter(x => !have.has(key(x))).map(x => Object.assign({}, x, {id: ++seq.n}))); };
+  const seq = {n: Math.max(a.seq || 0, ...(a.shifts || a.items || []).map(x => +x.id || 0))};
+  if (k === 'hours') return Object.assign({}, b, a, {norms: Object.assign({}, b.norms, a.norms), shifts: add(a.shifts, b.shifts, x => x.start, seq), seq: seq.n});
+  if (k === 'deadlines') return Object.assign({}, b, a, {items: add(a.items, b.items, x => x.name + '|' + x.date, seq), seq: seq.n});
+  if (k === 'bookmarks') return Object.assign({}, b, a, {items: uniq(a.items.concat(b.items), x => x.k)});
+  if (k === 'quiz') return Object.assign({}, b, a, {done: Object.assign({}, b.done, a.done)});
+  if (k === 'trains') return Object.assign({}, b, a, {routes: uniq(a.routes.concat(b.routes), r => r.join('|').toLowerCase()).slice(0, 6)});
+  return b;
+}
+async function moveImport(code) {
+  let d;
+  try { d = await moveRead(code); } catch (e) { return moveSay(code.trim() ? 'Код не подходит: скопируйте его целиком ещё раз.' : 'Вставьте код с другого устройства.'); }
+  const n = (k, f) => { try { return f(d[k]) || 0; } catch (e) { return 0; } };
+  const what = [[n('hours', x => x.shifts.length), 'поездку', 'поездки', 'поездок'], [n('deadlines', x => x.items.length), 'срок', 'срока', 'сроков'],
+    [n('bookmarks', x => x.items.length), 'закладку', 'закладки', 'закладок']].filter(c => c[0]).map(([c, ...w]) => `${c} ${plural(c, ...w)}`).join(', ');
+  ask(`Перенести ${what || 'данные'}? Поездки, сроки и закладки добавятся к тем, что уже есть здесь, а отпуск и расчёты заменятся.`, async () => {
+    moveSay('Переношу…');
+    for (const k of SYNC) {
+      if (!d[k] || typeof d[k] !== 'object') continue;
+      try {
+        let a = null;
+        try { a = JSON.parse(localStorage.getItem(k)); } catch (e) {}
+        localStorage.setItem(k, JSON.stringify(moveMerge(k, a, d[k])));
+        SYNCT[k] = Date.now();
+        if (TG && TG.isVersionAtLeast('6.9')) await cloudSend(k);
+      } catch (e) {}
+    }
+    try { localStorage.setItem('syncT', JSON.stringify(SYNCT)); sessionStorage.setItem('moved', '1'); } catch (e) {}
+    location.reload();   // страница перечитывает перенесённое
+  });
+}
+
 // ---- старт
 (async () => {
   // свёрнутые блоки помнят своё состояние
   const FOLD = load('folds', {marks: true});
   document.querySelectorAll('details.fold').forEach(d => { d.open = !!FOLD[d.dataset.fold]; d.addEventListener('toggle', () => { FOLD[d.dataset.fold] = d.open; save('folds', FOLD); }); });
+  try { if (sessionStorage.getItem('moved')) { sessionStorage.removeItem('moved'); go('more'); moveSay('Данные перенесены.'); } } catch (e) {}
   loadHours(); vacRender(); trainRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore(); toolsInit();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   try { META = await (await fetch('data/meta.json', {cache: 'no-cache'})).json(); }
