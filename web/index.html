@@ -10,6 +10,18 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="description" content="Поиск по нормативным документам железнодорожника и расчёты: отдых бригады, справка ВУ-45, учёт часов.">
 <title>РЖД Ассистент - документы и расчёты</title>
+<script>
+// Mini App в Telegram: библиотеку Telegram подключаем только когда страницу открыли из бота (Telegram передаёт tgWebApp... в адресе)
+(() => {
+  let tg = /tgWebApp/.test(location.hash);
+  try { tg = tg || !!sessionStorage.getItem('__telegram__initParams'); } catch (e) {}
+  if (!tg) return;
+  const s = document.createElement('script');
+  s.src = 'https://telegram.org/js/telegram-web-app.js'; s.async = true;
+  s.onload = () => document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', tgInit) : tgInit();
+  document.head.appendChild(s);
+})();
+</script>
 <style>
 :root{
   --bg:#0d0f13; --card:#181b21; --card2:#1f232b; --line:#2a2f37; --text:#f3f5f8; --muted:#8b949e;
@@ -611,7 +623,12 @@ html.big{zoom:1.15}
       <div class="pre" id="offText"></div>
       <button class="btn" id="offBtn" onclick="offlineAll()">Скачать всё для работы без сети</button>
     </div>
-    <p class="note">Чтобы сайт открывался как приложение со значком: в Safari на iPhone - «Поделиться» → «На экран Домой»; в Chrome на Android - меню → «Установить приложение» или «Добавить на главный экран».</p>
+    <div id="tgBox" style="display:none">
+      <h2>Telegram</h2>
+      <div class="card list"><div class="item"><span class="badge" style="--c:var(--blue)"><svg><use href="#i-cloud"/></svg></span><span><b>Данные в облаке Telegram</b><small id="tgSync">поездки, сроки, отпуск, закладки и расчёты видны на всех ваших устройствах с Telegram</small></span></div>
+        <button class="item" id="tgHome" style="display:none" onclick="TG.addToHomeScreen()"><span class="badge" style="--c:var(--green)"><svg><use href="#i-home"/></svg></span><span><b>Значок на экран телефона</b><small>открывать без захода в Telegram</small></span><span class="go"><svg><use href="#i-chev"/></svg></span></button></div>
+    </div>
+    <p class="note" id="pwaNote">Чтобы сайт открывался как приложение со значком: в Safari на iPhone - «Поделиться» → «На экран Домой»; в Chrome на Android - меню → «Установить приложение» или «Добавить на главный экран».</p>
   </section>
 </main>
 
@@ -640,8 +657,15 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s || '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const ic = n => `<svg><use href="#i-${n}"/></svg>`;
 
+let TG = null;   // Telegram.WebApp, когда страница открыта как Mini App в Telegram
+
 const NAV = {quiz: 'home', dates: 'home', train: 'home', tools: 'home', vac: 'home'};   // страницы без своей кнопки в нижнем меню
-function go(view, arg) {
+let VIEW = 'home', BACK = [];   // BACK - пройденные разделы для кнопки «Назад» в Telegram
+function go(view, arg, back) {
+  if (view === 'home') BACK = [];
+  else if (!back && view !== VIEW) BACK = [...BACK, VIEW].slice(-20);
+  VIEW = view;
+  if (TG) TG.BackButton[view === 'home' ? 'hide' : 'show']();
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === (NAV[view] || view)));
   $('gear').classList.toggle('on', view === 'more');
@@ -782,6 +806,7 @@ function exportTrips() {
   const rows = r.open.filter(x => x.start.slice(0, 7) === YM).concat(r.items).sort((a, b) => a.start < b.start ? -1 : 1).map(x => { const e = energy(x) || {};
     return [when(x.start), when(x.end), h(x.work), h(x.night), h(x.rest), h(x.home), x.train, x.loco, x.weight, x.axles, x.e1, x.e2, val(e.use), x.r1, x.r2, val(e.rec)]; });
   const text = '﻿' + [head, ...rows].map(row => row.map(v => cell(String(v || ''))).join(';')).join('\r\n');
+  if (TG && /^(ios|android)$/.test(TG.platform)) return tgShareCsv(text, `поездки-${YM}.csv`, [head, ...rows]);   // в Telegram на телефоне скачать файл нельзя
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], {type: 'text/csv;charset=utf-8'}));
   a.download = `поездки-${YM}.csv`;
@@ -796,9 +821,10 @@ function tripTo(id, mode) {   // вес и оси поездки подстав�
   go('calc', mode);
 }
 function delShift(id) {
-  if (!confirm('Удалить поездку?')) return;
-  if (EDIT === id) editShift(0);
-  HRS.shifts = HRS.shifts.filter(x => x.id !== id); save('hours', HRS); loadHours();
+  ask('Удалить поездку?', () => {
+    if (EDIT === id) editShift(0);
+    HRS.shifts = HRS.shifts.filter(x => x.id !== id); save('hours', HRS); loadHours();
+  });
 }
 
 // ---- калькулятор: режимы
@@ -806,7 +832,10 @@ const CALC_SUB = {rest: 'Сколько отдыхать в пункте обо�
   vu: 'Посчитаю требуемое и фактическое нажатие колодок и ручные тормоза.',
   shoe: 'Сколько тормозных башмаков нужно, чтобы закрепить поезд на перегоне.'};
 const load = (key, def) => { try { return Object.assign(def, JSON.parse(localStorage.getItem(key) || '{}')); } catch (e) { return def; } };
-const save = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} };
+const save = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} cloudPush(key); };
+// в Telegram эти данные копируются в облако Telegram (CloudStorage) и видны на всех устройствах пользователя
+const SYNC = ['hours', 'pay', 'deadlines', 'vacation', 'bookmarks', 'quiz', 'trains', 'calcRest', 'calcShoe', 'vu45'];
+const SYNCT = load('syncT', {}), CLOUD = {}, PUSH = {};   // SYNCT - когда данные менялись на этом устройстве, CLOUD - что лежит в облаке
 const clock = v => /^\d\d:\d\d/.test(v || '') ? +v.slice(0, 2) * 60 + +v.slice(3, 5) : null;
 const hhmm = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${p2(Math.floor(m / 60))}:${p2(m % 60)}`; };
 const dayWord = d => d <= 0 ? 'в те же сутки' : d === 1 ? 'на следующие сутки' : `через ${d} сут.`;
@@ -887,7 +916,7 @@ const vuCat = () => VU_CAT.find(c => c.id === VU.cat) || VU_CAT[0];
 function vuSet(key, value, redraw) {
   VU[key] = value;
   if (key === 'cat') VU.loco = !!vuCat().loco;
-  try { localStorage.setItem('vu45', JSON.stringify(VU)); } catch (e) {}
+  save('vu45', VU);
   redraw ? vuRender() : vuCalc();
 }
 function vuN(p, value) { VU.n[p] = value; vuSet('n', VU.n); }
@@ -1329,8 +1358,7 @@ function dateAdd() {
   renderDates();
 }
 function dateDel(id) {
-  if (!confirm('Удалить срок?')) return;
-  DL.items = DL.items.filter(x => x.id !== id); save('deadlines', DL); renderDates();
+  ask('Удалить срок?', () => { DL.items = DL.items.filter(x => x.id !== id); save('deadlines', DL); renderDates(); });
 }
 // ---- расписание электричек
 // станции Санкт-Петербурга и Ленинградской области по направлениям
@@ -1350,7 +1378,7 @@ const TR = load('trains', {routes: [], day: 0});
 function trainDay(d) { TR.day = d; save('trains', TR); [0, 1].forEach(i => $('tw-' + i).classList.toggle('on', i === d)); }
 function trainSwap() { const a = $('tFrom').value; $('tFrom').value = $('tTo').value; $('tTo').value = a; }
 function trainOpen(from, to) {
-  window.open(`https://rasp.yandex.ru/search/suburban/?fromName=${encodeURIComponent(from)}&toName=${encodeURIComponent(to)}&when=${TR.day ? 'завтра' : 'сегодня'}`, '_blank', 'noopener');
+  openLink(`https://rasp.yandex.ru/search/suburban/?fromName=${encodeURIComponent(from)}&toName=${encodeURIComponent(to)}&when=${TR.day ? 'завтра' : 'сегодня'}`);
 }
 function trainGo() {
   const from = $('tFrom').value.trim(), to = $('tTo').value.trim();
@@ -1408,13 +1436,17 @@ function quizRender() {
 function quizTile() { const n = Object.keys(QZ.done).length; $('tileQuiz').textContent = n ? `отмечено «знаю»: ${n}` : 'нестандартные ситуации'; }
 
 // ---- настройки: светлая тема, крупный шрифт, работа без сети
-const UI = load('ui', {light: false, big: false, offline: ''});   // offline - сборка сайта, скачанная для работы без сети
+// offline - сборка сайта, скачанная для работы без сети; manual - тему выбрали сами (иначе в Telegram она как в Telegram)
+const UI = load('ui', {light: false, big: false, offline: '', manual: false});
 function uiApply() {
+  if (TG && !UI.manual) UI.light = TG.colorScheme === 'light';
+  const bg = UI.light ? '#f4f5f7' : '#0d0f13';
   document.documentElement.classList.toggle('light', !!UI.light); document.documentElement.classList.toggle('big', !!UI.big);
-  document.querySelector('meta[name=theme-color]').content = UI.light ? '#f4f5f7' : '#0d0f13';
+  document.querySelector('meta[name=theme-color]').content = bg;
+  if (TG) { TG.setHeaderColor(bg); TG.setBackgroundColor(bg); if (TG.isVersionAtLeast('7.10')) TG.setBottomBarColor(bg); }
 }
 uiApply();
-function uiSet(key) { UI[key] = !UI[key]; save('ui', UI); uiApply(); renderMore(); }
+function uiSet(key) { UI[key] = !UI[key]; if (key === 'light') UI.manual = true; save('ui', UI); uiApply(); renderMore(); }
 const mb = b => (b / 1048576).toFixed(1).replace('.', ',') + ' МБ';
 function renderMore(text) {
   $('uiList').innerHTML = [['light', 'Светлая тема', 'для чтения на солнце', 'sun'], ['big', 'Крупный шрифт', 'всё на странице крупнее', 'doc']].map(([k, t, sub, i]) =>
@@ -1719,6 +1751,92 @@ function renderDocs() {
   $('docs').innerHTML = d.length ? secs.map((sec, i) => (secs.length > 1 ? `<h2 ${i ? '' : 'style="margin-top:0"'}>${esc(sec || 'Без раздела')}</h2>` : '') +
     `<div class="card list">${d.filter(x => x.sec === sec).map(x => docItem(x, sub(x))).join('')}</div>`).join('')
     : `<div class="card empty">${META ? 'Документов пока нет.' : 'Список документов не загрузился. Обновите страницу.'}</div>`;
+}
+
+// ---- Telegram Mini App: кнопка «Назад», тема Telegram, ссылки в браузере, свои диалоги, данные в облаке Telegram
+function tgInit() {
+  const w = window.Telegram && Telegram.WebApp;
+  if (!w || w.platform === 'unknown' || !w.isVersionAtLeast('6.1')) return;
+  TG = w;
+  w.ready(); w.expand();
+  if (w.isVersionAtLeast('7.7')) w.disableVerticalSwipes();   // иначе прокрутка вверх сворачивает приложение
+  w.BackButton.onClick(() => go(BACK.pop() || 'home', undefined, true));
+  if (VIEW !== 'home') w.BackButton.show();
+  w.onEvent('themeChanged', uiApply);
+  uiApply();
+  $('tgBox').style.display = ''; $('pwaNote').style.display = 'none';
+  if (w.isVersionAtLeast('8.0')) $('tgHome').style.display = '';
+  if (w.isVersionAtLeast('6.9')) cloudSync(); else $('tgSync').textContent = 'обновите Telegram, чтобы данные сохранялись в облаке';
+}
+function ask(text, yes) {   // confirm() в Telegram на телефоне может не показаться - там свой диалог
+  if (TG) TG.showConfirm(text, ok => { if (ok) yes(); });
+  else if (confirm(text)) yes();
+}
+function openLink(url) {   // из Telegram документы и внешние сайты открываются в браузере
+  if (TG) TG.openLink(new URL(url, location.href).href);
+  else window.open(url, '_blank', 'noopener');
+}
+document.addEventListener('click', e => {
+  const a = TG && e.target.closest('a[target=_blank]');
+  if (a) { e.preventDefault(); openLink(a.href); }
+});
+async function tgShareCsv(text, name, rows) {   // файл - через «Поделиться», а если нельзя - таблица в буфер обмена
+  const file = new File([text], name, {type: 'text/csv'});
+  try { if (navigator.canShare && navigator.canShare({files: [file]})) return await navigator.share({files: [file], title: name}); }
+  catch (e) { if (e.name === 'AbortError') return; }
+  const tsv = rows.map(r => r.map(v => String(v || '').replace(/\s+/g, ' ')).join('\t')).join('\n');
+  let ok = false;
+  try { await navigator.clipboard.writeText(tsv); ok = true; } catch (e) {
+    const t = document.createElement('textarea'); t.value = tsv; document.body.appendChild(t); t.select();
+    try { ok = document.execCommand('copy'); } catch (e2) {}
+    t.remove();
+  }
+  TG.showAlert(ok ? 'Таблица скопирована. Вставьте её в Excel или Google Таблицы.' : 'Не получилось выгрузить таблицу. Откройте Mini App в Telegram на компьютере.');
+}
+
+// облако Telegram: значение - до 4096 символов, поэтому данные режутся на части. Части пишутся по очереди в два набора (a и b),
+// а ключ с меткой «время:набор:частей» - последним: недописанная выгрузка не портит то, что уже лежит в облаке
+const cloud = (m, ...a) => new Promise((ok, no) => TG.CloudStorage[m](...a, (e, r) => e ? no(e) : ok(r)));
+function cloudPush(key) {
+  if (!TG || !SYNC.includes(key) || !TG.isVersionAtLeast('6.9')) return;
+  SYNCT[key] = Date.now();
+  try { localStorage.setItem('syncT', JSON.stringify(SYNCT)); } catch (e) {}
+  clearTimeout(PUSH[key]); PUSH[key] = setTimeout(() => cloudSend(key), 1500);
+}
+async function cloudSend(key) {
+  const s = localStorage.getItem(key), t = SYNCT[key];
+  if (s === null || !t) return;
+  const cp = Array.from(s), parts = [];
+  for (let i = 0; i < cp.length || !parts.length; i += 2000) parts.push(cp.slice(i, i + 2000).join(''));
+  if (parts.length > 400) return;   // в облаке не больше 1024 ключей
+  const gen = CLOUD[key] && CLOUD[key].gen === 'a' ? 'b' : 'a';
+  try {
+    await Promise.all(parts.map((x, i) => cloud('setItem', `${key}_${gen}${i}`, x)));
+    await cloud('setItem', key, `${t}:${gen}:${parts.length}`);
+    CLOUD[key] = {t, gen};
+  } catch (e) {}
+}
+async function cloudSync() {   // при запуске: что новее в облаке - забираем, что новее здесь - отправляем
+  let got = false, meta;
+  try { meta = await cloud('getItems', SYNC); } catch (e) { return; }
+  for (const key of SYNC) {
+    const [t, gen, n] = (meta[key] || '').split(':'), ct = +t || 0, lt = SYNCT[key] || 0;
+    if (ct) CLOUD[key] = {t: ct, gen};
+    try {
+      if (ct > lt) {
+        const ks = Array.from({length: +n}, (_, i) => `${key}_${gen}${i}`), got1 = await cloud('getItems', ks), s = ks.map(k => got1[k] || '').join('');
+        JSON.parse(s);   // битое не берём
+        localStorage.setItem(key, s); SYNCT[key] = ct; got = true;
+      } else if (localStorage.getItem(key) !== null && (lt > ct || !ct)) {
+        if (!lt) SYNCT[key] = Date.now();
+        cloudSend(key);
+      }
+    } catch (e) {}
+  }
+  try { localStorage.setItem('syncT', JSON.stringify(SYNCT)); } catch (e) {}
+  let again = false;
+  try { again = sessionStorage.getItem('cloudReload'); sessionStorage.setItem('cloudReload', '1'); } catch (e) { again = true; }
+  if (got && !again) location.reload();   // данные с другого устройства: перерисовываем страницу с ними
 }
 
 // ---- старт
