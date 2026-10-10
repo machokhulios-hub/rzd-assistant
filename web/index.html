@@ -252,6 +252,10 @@ a.item{color:inherit;text-decoration:none}
 .cal button.in{background:rgba(52,211,153,.16);color:var(--text)}
 .cal button.edge{background:var(--green);color:#0d0f13;font-weight:800}
 .vac .big{font-size:30px;margin-top:14px}
+.vdays{display:flex;gap:8px;align-items:flex-end;margin-top:14px}
+.vdays label{flex:1;display:grid;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted)}
+.vdays .inp{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;outline:0;color:var(--text);font-weight:600;min-height:46px}
+.vdays .chip{height:46px;padding:0 14px;font-weight:700}
 
 /* сворачиваемые блоки */
 .fold{margin-top:26px}
@@ -409,14 +413,14 @@ html.big{zoom:1.15}
 
   <!-- Календарь отпуска -->
   <section class="view" id="v-vac">
-    <h1>Отпуск</h1><p class="sub">Отметьте первый и последний день - посчитаю дни отпуска, праздники и дату выхода.</p>
+    <h1>Отпуск</h1><p class="sub">Отметьте первый день и последний - или сколько дней отпуска: посчитаю праздники, последний день и дату выхода.</p>
     <div class="card vac sum">
       <div class="mon"><button onclick="vacMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
         <b id="vacName"></b><button onclick="vacMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
       <div class="cal" id="vacGrid"></div>
       <div id="vacOut"></div>
     </div>
-    <p class="note">Нерабочие праздничные дни, попавшие в отпуск, в число дней отпуска не входят (статья 120 Трудового кодекса). Переносы выходных по производственному календарю не учитываются. Даты хранятся только в этом браузере.</p>
+    <p class="note">Нерабочие праздничные дни, попавшие в отпуск, в число дней отпуска не входят и продлевают его (статья 120 Трудового кодекса). Ежегодный основной отпуск - 28 календарных дней (статья 115). Дополнительные: за вредные условия труда - не меньше 7 дней (статья 117), за ненормированный рабочий день - не меньше 3 (статья 119), в районах Крайнего Севера - 24, в приравненных местностях - 16 (статья 321); их точное число - в трудовом договоре и коллективном договоре. День выхода при пятидневке - по производственному календарю с переносами выходных; при сменном графике - по графику. Даты хранятся только в этом браузере.</p>
   </section>
 
   <!-- Поиск по документам: результаты сверху, строка поиска внизу, как в чате -->
@@ -1746,6 +1750,19 @@ function vacPick(s) {
   save('vacation', VAC); vacRender();
 }
 function vacClear() { VAC.a = VAC.b = ''; save('vacation', VAC); vacRender(); }
+const isHol = t => HOLIDAYS.includes(new Date(t).toISOString().slice(5, 10));
+function vacDays(v) {   // число дней в счёт отпуска - последний день считается сам, праздники отпуск продлевают
+  const n = Math.min(365, int(v));
+  if (!VAC.a || !n) return;
+  let t = utc(VAC.a);
+  for (let k = isHol(t) ? 0 : 1; k < n || isHol(t); ) { t += 864e5; if (!isHol(t)) k++; }
+  VAC.b = new Date(t).toISOString().slice(0, 10); save('vacation', VAC);
+  if (VAC.b.slice(0, 7) !== VM) VM = VAC.b.slice(0, 7);   // показываю месяц, где отпуск кончается
+  vacRender();
+}
+const vacInput = v => `<form class="vdays" onsubmit="event.preventDefault();vacDays($('vacN').value)">
+  <label>Дней в счёт отпуска<input class="inp" id="vacN" inputmode="numeric" maxlength="3" value="${v || ''}" placeholder="например, 28" onchange="vacDays(this.value)"></label>
+  ${[28, 14, 7].map(k => `<button type="button" class="chip" onclick="vacDays(${k})">${k}</button>`).join('')}</form>`;
 function vacRender() {
   const y = +VM.slice(0, 4), m = +VM.slice(5, 7) - 1, first = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate(), now = iso(new Date());
   const {a, b} = VAC;
@@ -1758,14 +1775,20 @@ function vacRender() {
   }
   $('vacGrid').innerHTML = h;
   if (!a) { $('vacOut').innerHTML = `<div class="verd">Нажмите первый день отпуска, затем последний.</div>`; return; }
-  if (!b) { $('vacOut').innerHTML = `<div class="verd">Первый день - ${dmy(a)}. Теперь нажмите последний день.</div>`; return; }
+  if (!b) { $('vacOut').innerHTML = `<div class="verd">Первый день - ${dmy(a)}. Теперь нажмите последний день или укажите, сколько дней отпуска.</div>` + vacInput(''); return; }
   const days = Math.round((utc(b) - utc(a)) / 864e5) + 1;
   let hol = 0;
-  for (let t = utc(a); t <= utc(b); t += 864e5) hol += HOLIDAYS.includes(new Date(t).toISOString().slice(5, 10));
+  for (let t = utc(a); t <= utc(b); t += 864e5) hol += isHol(t);
   const back = new Date(utc(b) + 864e5).toISOString().slice(0, 10), word = k => plural(k, 'день', 'дня', 'дней');
+  // при пятидневке выход - в первый рабочий день по производственному календарю (с переносами)
+  let wk = utc(back);
+  for (let i = 0; i < 30 && !isWork(dayKind(new Date(wk).getUTCFullYear(), new Date(wk).getUTCMonth(), new Date(wk).getUTCDate())); i++) wk += 864e5;
+  const work5 = new Date(wk).toISOString().slice(0, 10), WD = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'], WDF = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'], wd = s => WD[new Date(utc(s)).getUTCDay()];
   $('vacOut').innerHTML = `<div class="big">${days} ${word(days)} <small>с ${dmy(a)} по ${dmy(b)}</small></div>
     <div class="stats" style="margin-top:14px"><div><small>Праздничных</small><b>${hol}</b></div><div><small>В счёт отпуска</small><b>${days - hol} ${word(days - hol)}</b></div>
-      <div><small>Выход</small><b>${dmy(back).slice(0, 5)}</b></div></div>
+      <div><small>Выход</small><b>${dmy(back).slice(0, 5)} ${wd(back)}</b></div></div>
+    ${work5 !== back ? `<div class="verd">Выход ${dmy(back)} - ${WDF[new Date(utc(back)).getUTCDay()]}. При пятидневке - ${dmy(work5)} (${wd(work5)}), первый рабочий день по производственному календарю.</div>` : ''}
+    ${vacInput(days - hol)}
     <button class="linkbtn" style="margin-top:14px" onclick="vacClear()">Очистить даты</button>`;
   $('tileVac').textContent = `${days} ${word(days)} · с ${dmy(a).slice(0, 5)}`;
 }
