@@ -164,8 +164,8 @@ def _docx_parts(path: Path, per_part: int = 10) -> list[tuple[str, str]]:
 
 
 # ---- страница для чтения: DOCX и TXT открываются на сайте, а не скачиваются
-VIEW_CSS = """:root{color-scheme:light dark;--bg:#fff;--text:#111;--muted:#666;--line:#ddd}
-@media (prefers-color-scheme:dark){:root{--bg:#0b0d12;--text:#e8eaf0;--muted:#9aa0ad;--line:#2a2f3a}}
+VIEW_CSS = """:root{color-scheme:light;--bg:#fff;--text:#111;--muted:#666;--line:#ccc}   /* всегда белый лист, как в оригинале - и в тёмной теме */
+html{background:#fff}
 body{margin:0;background:var(--bg);color:var(--text);font:17px/1.55 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
 main{max-width:760px;margin:0 auto;padding:20px 16px 60px;overflow-wrap:anywhere}
 p{margin:0 0 .7em}.c{text-align:center}.r{text-align:right}h2{font-size:1.05em;line-height:1.35;margin:1.4em 0 .7em}
