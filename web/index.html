@@ -391,6 +391,7 @@ html.big{zoom:1.15}
     <h1>Нормативка под рукой</h1>
     <p class="sub" id="homeSub">Поиск по документам и расчёты для смены.</p>
 
+    <div id="nowBox" hidden><h2>Сейчас</h2><div class="card list" id="nowList"></div></div>
     <div>
       <h2>Разделы</h2>
       <div class="tiles">
@@ -401,11 +402,11 @@ html.big{zoom:1.15}
         <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><b>Документы</b><small id="tileDocs">все файлы по разделам</small></button>
         <button class="card tile" style="--c:var(--amber)" onclick="go('soon','tests')"><span class="badge"><svg><use href="#i-test"/></svg></span><b>Тесты</b><small>раздел готовится</small></button>
         <button class="card tile" style="--c:var(--violet)" onclick="go('quiz')"><span class="badge"><svg><use href="#i-q"/></svg></span><b>Билеты</b><small id="tileQuiz">нестандартные ситуации</small></button>
-        <button class="card tile" style="--c:var(--cyan)" onclick="go('calc','rest')"><span class="badge"><svg><use href="#i-calc"/></svg></span><b>Бригадник</b><small>отдых и время подъёма</small></button>
+        <button class="card tile" style="--c:var(--cyan)" onclick="go('calc','rest')"><span class="badge"><svg><use href="#i-calc"/></svg></span><b>Бригадник</b><small id="tileRest">отдых и время подъёма</small></button>
         <button class="card tile" style="--c:var(--green)" onclick="go('hours')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Учёт часов</b><small id="tileHours">поездки, отдых, итог за месяц</small></button>
-        <button class="card tile" style="--c:var(--red)" onclick="go('calc','shoe')"><span class="badge"><svg><use href="#i-pin"/></svg></span><b>Башмаки</b><small>закрепление на перегоне</small></button>
-        <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><b>ВУ-45</b><small>нажатие колодок</small></button>
-        <button class="card tile" style="--c:var(--blue)" onclick="go('tools','calc')"><span class="badge"><svg><use href="#i-math"/></svg></span><b>Калькулятор</b><small>проценты, история</small></button>
+        <button class="card tile" style="--c:var(--red)" onclick="go('calc','shoe')"><span class="badge"><svg><use href="#i-pin"/></svg></span><b>Башмаки</b><small id="tileShoe">закрепление на перегоне</small></button>
+        <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><b>ВУ-45</b><small id="tileVu">нажатие колодок</small></button>
+        <button class="card tile" style="--c:var(--blue)" onclick="go('tools','calc')"><span class="badge"><svg><use href="#i-math"/></svg></span><b>Калькулятор</b><small id="tileKc">проценты, история</small></button>
         <button class="card tile" style="--c:var(--violet)" onclick="go('tools','timer')"><span class="badge"><svg><use href="#i-timer"/></svg></span><b>Таймер</b><small id="tileTimer">таймер и секундомер</small></button>
       </div>
 
@@ -792,7 +793,7 @@ let TG = null;   // Telegram.WebApp, когда страница открыта 
 const NAV = {quiz: 'home', dates: 'more', train: 'home', tools: 'home', vac: 'more', soon: 'home'};   // страницы без своей кнопки в нижнем меню
 let VIEW = 'home', BACK = [];   // BACK - пройденные разделы для кнопки «Назад» в Telegram
 function go(view, arg, back) {
-  if (view === 'home') BACK = [];
+  if (view === 'home') { BACK = []; homeNow(); }
   else if (!back && (view !== VIEW || view === 'docs' && arg !== undefined)) BACK = [...BACK, VIEW].slice(-20);
   VIEW = view;
   if (TG) TG.BackButton[view === 'home' ? 'hide' : 'show']();
@@ -1683,7 +1684,58 @@ function tick() {
     const diff = mskDiff(-now.getTimezoneOffset()), msk = new Date(+now + (MSK + now.getTimezoneOffset()) * 60000);
     $('tileClock').textContent = `${hms(now).slice(0, 5)} · ` + (diff ? `Москва ${hms(msk).slice(0, 5)}` : 'московское время');
     tmTile();
+    if (now.getSeconds() === 0 || tmState() === 'run' && now.getMilliseconds() < 500) homeNow();
   }
+}
+// ---- главная: что важно сейчас - из всех разделов
+function homeNow() {
+  const now = new Date(), rows = [], row = (go, icon, c, title, sub) => rows.push(`<button class="item dir" onclick="${go}"><span class="badge" style="--c:var(--${c})">${ic(icon)}</span>
+    <span><b>${title}</b><small>${sub}</small></span><span class="go">${ic('chev')}</span></button>`);
+  // поездка: явка, работа, отдых в бригаднике
+  const t = crOpen();
+  if (t) {
+    const {a, same, rs, re, wake} = tripPlan(t);
+    if (now < a) { if (a - now < 24 * 3600e3) row("go('hours')", 'clock', 'green', `Явка в ${hmD(a, now)}`, `через ${dur(a - now)}` + (t.train ? ` · поезд № ${esc(t.train)}` : '')); }
+    else if (now - a < MAX_TRIP * 60000) {
+      if (same && now >= rs && now < re) row("go('tools','clock')", 'clock', 'cyan', now < wake ? `Подъём в ${hmD(wake, now)}` : `Явка из бригадника в ${hmD(re, now)}`,
+        now < wake ? `через ${dur(wake - now)} · явка не раньше ${hmD(re, now)}` : `через ${dur(re - now)}`);
+      else {
+        const from = same && now >= re ? re : a, lim = new Date(+from + MAX_CONT * 60000), on = now - from;
+        row("go('tools','clock')", 'clock', on < MAX_CONT * 60000 ? 'green' : 'amber', `На работе ${dur(on)}`,
+          on < MAX_CONT * 60000 ? `12 часов - в ${hmD(lim, now)}` + (same && now < rs ? ` · отдых с ${hmD(rs, now)}` : '') : 'непрерывная работа больше 12 часов');
+      }
+    }
+  }
+  // таймер
+  if (tmState() === 'run') row("go('tools','timer')", 'timer', 'violet', `Таймер: ${tmFmt(tmLeft())}`, `сработает в ${tmAt(TMR.end)}${TMR.what ? ' · ' + esc(TMR.what.split('. ')[0]) : ''}`);
+  // ближайший срок: просрочен или меньше 30 дней
+  const dl = DL.items.slice().sort((x, y) => x.date < y.date ? -1 : 1).find(x => daysLeft(x.date) <= 30);
+  if (dl) { const n = daysLeft(dl.date); row("go('dates')", 'bell', n < 0 ? 'red' : 'amber', esc(dl.name), `до ${dmy(dl.date)} · ${dueText(n)}`); }
+  // отпуск: скоро или идёт
+  if (VAC.a && VAC.b) {
+    const today = iso(now), till = Math.round((utc(VAC.a) - utc(today)) / 864e5), back = new Date(utc(VAC.b) + 864e5).toISOString().slice(0, 10);
+    if (today >= VAC.a && today <= VAC.b) row("go('vac')", 'cal', 'violet', 'Отпуск идёт', `выход ${dmy(back)}`);
+    else if (till > 0 && till <= 60) row("go('vac')", 'cal', 'violet', `Отпуск через ${till} ${plural(till, 'день', 'дня', 'дней')}`, `с ${dmy(VAC.a)} по ${dmy(VAC.b)}`);
+  }
+  // электричка: домой после поездки или на работу к явке
+  if (TR.home && TR.work) {
+    const next = HRS.shifts.filter(x => new Date(x.start) > now).sort((x, y) => x.start < y.start ? -1 : 1)[0];
+    const last = HRS.shifts.filter(x => x.end && new Date(x.end) <= now).sort((x, y) => x.end < y.end ? 1 : -1)[0];
+    const soon = next && new Date(next.start) - now < 6 * 3600e3, done = last && now - new Date(last.end) < 6 * 3600e3;
+    const tom = next && next.start.slice(0, 10) !== iso(now) ? 1 : 0;
+    if (soon) rows.push(`<button class="item dir" data-a="${esc(TR.home)}" data-b="${esc(TR.work)}" onclick="trainOpen(this.dataset.a,this.dataset.b,${tom})"><span class="badge" style="--c:var(--cyan)">${ic('train')}</span>
+      <span><b>Электричка на работу</b><small>${esc(TR.home)} → ${esc(TR.work)} · явка в ${next.start.slice(11, 16)}</small></span><span class="go">${ic('chev')}</span></button>`);
+    else if (done) rows.push(`<button class="item dir" data-a="${esc(TR.work)}" data-b="${esc(TR.home)}" onclick="trainOpen(this.dataset.a,this.dataset.b,0)"><span class="badge" style="--c:var(--cyan)">${ic('train')}</span>
+      <span><b>Электричка домой</b><small>${esc(TR.work)} → ${esc(TR.home)}</small></span><span class="go">${ic('chev')}</span></button>`);
+  }
+  $('nowList').innerHTML = rows.join(''); $('nowBox').hidden = !rows.length;
+  // подписи плиток - по данным разделов
+  const w = num(VU.w);
+  if (w) { const v = vuTotals(); $('tileVu').textContent = v.fact ? `${ru(v.fact)} из ${ru(v.need)} тс` + (v.fact >= v.need ? ' - обеспечен' : ' - не хватает') : `${ru(w)} тс, нужно ${ru(v.need)} тс`; }
+  if (num(SH.w)) $('tileShoe').textContent = `${ru(num(SH.w))} тс` + (String(SH.i).trim() !== '' ? `, уклон ${SH.i} ‰` : '');
+  const pl = crPlan();
+  if (pl) $('tileRest').textContent = `отдых ${hs(pl.rest)} · явка с ${hhmm(pl.b + pl.gap + pl.rest)}`;
+  if (KC.h.length) $('tileKc').textContent = `${kcShow(KC.h[0].e)} = ${kcShow(kcNum(Math.round(+KC.h[0].r * 100) / 100) || KC.h[0].r)}`;
 }
 function toolsInit() {
   setInterval(tick, 500); tick();
@@ -2480,7 +2532,7 @@ async function accLogout() {
   const FOLD = load('folds', {marks: true});
   document.querySelectorAll('details.fold').forEach(d => { d.open = !!FOLD[d.dataset.fold]; d.addEventListener('toggle', () => { FOLD[d.dataset.fold] = d.open; save('folds', FOLD); }); });
   try { if (sessionStorage.getItem('moved')) { sessionStorage.removeItem('moved'); go('more'); moveSay('Данные перенесены.'); } } catch (e) {}
-  loadHours(); vacRender(); trainRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore(); toolsInit();
+  loadHours(); vacRender(); trainRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore(); toolsInit(); homeNow();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   accLoad();
   try {
