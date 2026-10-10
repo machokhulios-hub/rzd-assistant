@@ -86,6 +86,12 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .cal div.wk{background:rgba(52,211,153,.16)}
 .cal div.now{box-shadow:inset 0 0 0 1px var(--line)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:12px;color:var(--muted)}
+.stsel{position:relative}
+.stlist{display:none;position:absolute;left:0;right:0;top:100%;z-index:20;margin-top:4px;max-height:260px;overflow-y:auto;background:var(--card2);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.stlist.on{display:block}
+.stlist button{display:block;width:100%;text-align:left;padding:11px 14px;font-weight:600;color:var(--text);font-size:15px;border-bottom:1px solid var(--line)}
+.stlist button:last-child{border-bottom:0}
+.stlist small{display:block;padding:11px 14px;color:var(--muted)}
 .mon button{width:42px;height:42px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:18px;display:grid;place-items:center}
 .sum{padding:16px}
 .sum .big{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums}
@@ -482,9 +488,9 @@ html.big{zoom:1.15}
   <section class="view" id="v-train">
     <h1>Электрички</h1><p class="sub">Расписание пригородных поездов между станциями.</p>
     <form class="card form" onsubmit="event.preventDefault();trainGo()">
-      <label>Откуда<input class="inp" id="tFrom" autocomplete="off" placeholder="станция отправления"></label>
+      <label class="stsel">Откуда<input class="inp" id="tFrom" autocomplete="off" placeholder="выберите станцию" onfocus="stOpen(this)" oninput="stOpen(this)" onblur="setTimeout(stClose,150)"><div class="stlist" id="tFromL"></div></label>
       <button type="button" class="linkbtn" style="justify-self:start" onclick="trainSwap()">⇅ Поменять местами</button>
-      <label>Куда<input class="inp" id="tTo" autocomplete="off" placeholder="станция назначения"></label>
+      <label class="stsel">Куда<input class="inp" id="tTo" autocomplete="off" placeholder="выберите станцию" onfocus="stOpen(this)" oninput="stOpen(this)" onblur="setTimeout(stClose,150)"><div class="stlist" id="tToL"></div></label>
       <div class="seg" style="margin:0"><button type="button" id="tw-0" onclick="trainDay(0)">Сегодня</button><button type="button" id="tw-1" onclick="trainDay(1)">Завтра</button></div>
       <div class="err" id="tErr"></div>
       <button class="btn">Показать расписание</button>
@@ -1016,6 +1022,19 @@ function dateDel(id) {
   DL.items = DL.items.filter(x => x.id !== id); save('deadlines', DL); renderDates();
 }
 // ---- расписание электричек
+// станции Санкт-Петербурга и Ленинградской области по направлениям
+const STATIONS = ['Санкт-Петербург (Финляндский вокзал)', 'Санкт-Петербург (Московский вокзал)', 'Санкт-Петербург (Балтийский вокзал)', 'Санкт-Петербург (Витебский вокзал)', 'Санкт-Петербург (Ладожский вокзал)', 'Ланская', 'Удельная', 'Озерки', 'Шувалово', 'Парголово', 'Левашово', 'Песочная', 'Дибуны', 'Белоостров', 'Солнечное', 'Репино', 'Комарово', 'Зеленогорск', 'Ушково', 'Рощино', 'Горьковское', 'Каннельярви', 'Лейпясуо', 'Кирилловское', 'Попово', 'Гаврилово', 'Выборг', 'Новая Деревня', 'Старая Деревня', 'Лахта', 'Ольгино', 'Лисий Нос', 'Горская', 'Александровская', 'Разлив', 'Тарховка', 'Сестрорецк', 'Курорт', 'Кушелевка', 'Пискарёвка', 'Ручьи', 'Девяткино', 'Капитолово', 'Кузьмолово', 'Токсово', 'Кавголово', 'Орехово', 'Лемболово', 'Грузино', 'Пери', 'Сосново', 'Петяярви', 'Лосево', 'Громово', 'Отрадное', 'Приозерск', 'Кузнечное', 'Ржевка', 'Ковалёво', 'Бернгардовка', 'Всеволожская', 'Мельничный Ручей', 'Кирпичный Завод', 'Ладожское Озеро', 'Борисова Грива', 'Романовка', 'Обухово', 'Рыбацкое', 'Ижоры', 'Колпино', 'Саблино', 'Тосно', 'Ушаки', 'Любань', 'Мга', 'Невдубстрой', 'Назия', 'Жихарево', 'Войбокало', 'Волховстрой', 'Кириши', 'Тихвин', 'Броневая', 'Ленинский Проспект', 'Дачное', 'Ульянка', 'Лигово', 'Сосновая Поляна', 'Сергиево', 'Стрельна', 'Новый Петергоф', 'Старый Петергоф', 'Университетская', 'Мартышкино', 'Ораниенбаум', 'Большая Ижора', 'Лебяжье', 'Калище', 'Горелово', 'Красное Село', 'Можайская', 'Дудергоф', 'Тайцы', 'Пудость', 'Гатчина-Балтийская', 'Гатчина-Варшавская', 'Сиверская', 'Мшинская', 'Луга', 'Волосово', 'Кингисепп', 'Ивангород', 'Купчино', 'Шушары', 'Детское Село', 'Павловск', 'Тярлево', 'Новолисино', 'Вырица', 'Семрино', 'Оредеж'];
+const stNorm = s => s.toLowerCase().replace(/ё/g, 'е');
+function stOpen(inp) {
+  const q = stNorm(inp.value.trim()), L = $(inp.id + 'L');
+  const rank = n => !q ? 1 : stNorm(n).startsWith(q) ? 0 : stNorm(n).split(/[ ()-]+/).some(w => w.startsWith(q)) ? 1 : stNorm(n).includes(q) ? 2 : 3;
+  const hit = STATIONS.filter(n => rank(n) < 3).sort((a, b) => rank(a) - rank(b));
+  L.innerHTML = hit.length ? hit.map(n => `<button type="button" onmousedown="event.preventDefault()" onclick="stPick('${inp.id}',this.textContent)">${n}</button>`).join('')
+    : '<small>Нет в списке - можно оставить как написано</small>';
+  L.classList.add('on');
+}
+function stPick(id, n) { $(id).value = n; stClose(); }
+function stClose() { ['tFromL', 'tToL'].forEach(i => $(i).classList.remove('on')); }
 const TR = load('trains', {routes: [], day: 0});
 function trainDay(d) { TR.day = d; save('trains', TR); [0, 1].forEach(i => $('tw-' + i).classList.toggle('on', i === d)); }
 function trainSwap() { const a = $('tFrom').value; $('tFrom').value = $('tTo').value; $('tTo').value = a; }
