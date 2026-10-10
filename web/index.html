@@ -546,7 +546,10 @@ html.big{zoom:1.15}
       <div class="card" id="payOut" style="margin-top:12px;overflow:hidden"></div>
       <p class="note">Это оценка по записанным поездкам, а не расчётный листок. Тариф - ставка × часы. Ночные - доплата к ставке за часы с 22:00 до 06:00. Праздничные часы оплачиваются в двойном размере. Сверхурочные - часы сверх нормы месяца (без праздничных): первые два в полуторном размере, остальные в двойном. Премия считается от тарифа, районный коэффициент и надбавки - от всей суммы, НДФЛ - 13 %. В депо учётный период, доплаты и премия считаются по своим правилам - сверяйте с расчётным листком.</p>
     </details>
-    <div id="prodCal"></div>
+    <details class="fold" data-fold="cal">
+      <summary>Производственный календарь <span id="calSum"></span><svg><use href="#i-chev"/></svg></summary>
+      <div id="prodCal"></div>
+    </details>
     <p class="note">Поездки хранятся только в этом браузере на этом устройстве. Расчёт по приказу Минтранса № 339: отдых дома = рабочее время × 2,6 − отдых в пункте оборота, не меньше 16 часов. Отдых в пункте оборота - не меньше половины работы до него (при многократном обороте пригородного поезда - не меньше 1 часа) и не дольше этой работы. Вес и оси можно взять из справки ВУ-45, отдых в обороте - из Бригадника, если там та же явка. Ночные часы - с 22:00 до 06:00. В вашем депо могут действовать свои нормы - сверяйте с маршрутом и табелем.</p>
   </section>
 
@@ -2135,7 +2138,8 @@ function prodCal(ym) {
     const k = dayKind(y, m, d), sat = (first + d - 1) % 7 > 4;
     g += `<div class="${[k !== 'wk' && 'we', k === 'wk' && sat && 'wk', isShort(y, m, d) && 'sh', d === today && 'now'].filter(Boolean).join(' ')}">${d}</div>`;
   }
-  $('prodCal').innerHTML = `<h2>Производственный календарь</h2><div class="card"><div class="cal">${g}</div>
+  $('calSum').textContent = `· норма ${c.hours} ч`;
+  $('prodCal').innerHTML = `<div class="card"><div class="cal">${g}</div>
     <div class="legend"><span style="color:var(--red)">● выходной, праздник</span><span style="color:var(--amber)">● сокращённый день, 7 ч</span><span style="color:var(--green)">● рабочая суббота</span></div>
     <div class="stats" style="margin-top:14px"><div><small>Рабочих</small><b>${c.days} ${word(c.days)}</b></div><div><small>Выходных</small><b>${c.off} ${word(c.off)}</b></div><div><small>Норма</small><b>${c.hours} ч</b></div></div>
     ${c.exact ? '' : '<p class="note" style="margin:12px 0 0">На этот год постановления о переносах выходных у меня нет: праздники на выходные перенесены по общему правилу, поэтому норма ориентировочная.</p>'}</div>`;
@@ -2689,7 +2693,7 @@ async function accLogout() {
 // ---- старт
 (async () => {
   // свёрнутые блоки помнят своё состояние
-  const FOLD = load('folds', {marks: true});
+  const FOLD = load('folds', {marks: true, pay: true});
   document.querySelectorAll('details.fold').forEach(d => { d.open = !!FOLD[d.dataset.fold]; d.addEventListener('toggle', () => { FOLD[d.dataset.fold] = d.open; save('folds', FOLD); }); });
   try { if (sessionStorage.getItem('moved')) { sessionStorage.removeItem('moved'); go('more'); moveSay('Данные перенесены.'); } } catch (e) {}
   $('paxList').innerHTML = PAX_ST.map(n => `<option value="${esc(n)}">`).join('');
