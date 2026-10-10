@@ -502,16 +502,16 @@ html.big{zoom:1.15}
           <label>Явка на работу<input type="time" id="crA" oninput="crSet('a',this.value)"></label>
           <label>Окончание работы<input type="time" id="crB" oninput="crSet('b',this.value)"></label>
         </div>
+        <div class="pre" id="crFrom"></div>
         <label>Начало отдыха в бригаднике<input type="time" id="crR" oninput="crSet('r',this.value)"></label>
         <div class="pre">Если не заполнять - отдых считается с окончания работы.</div>
-        <div class="two keep">
-          <label>Отдых<select class="inp" id="crPart" onchange="crSet('part',this.value)"><option value="0.5">половинка</option><option value="1">полный</option></select></label>
-          <label>Будят до явки, мин<input class="inp" id="crWake" inputmode="numeric" placeholder="60" oninput="crSet('wake',this.value)"></label>
-        </div>
+        <label>Отдых<select class="inp" id="crPart" onchange="crSet('part',this.value)"><option value="0.5">не меньше половины работы - обычный оборот</option>
+          <option value="s">пригородный, многократный оборот - не меньше 1 часа</option><option value="1">полный - равный работе, наибольший</option></select></label>
+        <label>Будят до явки, мин<input class="inp" id="crWake" inputmode="numeric" placeholder="60" oninput="crSet('wake',this.value)"></label>
       </div>
       <h2>Итог <a onclick="crClear()">очистить</a></h2>
       <div id="crOut"></div>
-      <p class="note">По приказу Минтранса № 339 отдых в пункте оборота - не меньше половины отработанного до него времени; половину от нечётного числа минут округляю вверх. В вашем депо могут действовать свои нормы - сверяйте с дежурным по депо и маршрутом.</p>
+      <p class="note">По приказу Минтранса № 339 отдых в пункте оборота - не меньше половины отработанного до него времени; половину от нечётного числа минут округляю вверх. При многократном обороте пригородного поезда перерыв для отдыха и питания может быть меньше половины, но не меньше 1 часа. Отдыхать в пункте оборота дольше отработанного времени не положено - поэтому показываю и самую позднюю явку. В вашем депо могут действовать свои нормы - сверяйте с дежурным по депо и маршрутом.</p>
     </div>
 
     <div id="c-shoe">
@@ -791,7 +791,7 @@ function renderHours(r) {
   };
   const acts = x => `<span class="acts"><button class="x" onclick="editShift(${x.id})" aria-label="Изменить поездку">✎</button><button class="x" onclick="delShift(${x.id})" aria-label="Удалить поездку">✕</button></span>`;
   $('trips').innerHTML = r.items.length || r.open.length ? `<div class="card">` + r.open.map(x =>
-    `<div class="trip"><div><div class="when">${dt(x.start)} → …</div><b>Не завершена</b>${info(x)}
+    `<div class="trip"><div><div class="when">${dt(x.start)} → …</div><b>Не завершена</b>${info(x)}<small><button class="linkbtn" onclick="tripTo(${x.id},'rest')">Бригадник - когда явка из оборота</button></small>
       <small class="w">Допишите окончание работы (кнопка ✎) - посчитаю часы и отдых.</small></div>${acts(x)}</div>`).join('') + r.items.map(x =>
     `<div class="trip"><div><div class="when">${dt(x.start)} → ${dt(x.end)}</div><b>${hm(x.work)}</b>${info(x)}
       <small>${x.rest ? `отдых в обороте ${hm(x.rest)} · ` : ''}ночных ${hm(x.night)} · дома не меньше ${hm(x.home)}</small>
@@ -883,6 +883,7 @@ function exportTrips() {
 function tripTo(id, mode) {   // вес и оси поездки подставляются в расчёт
   const x = HRS.shifts.find(t => t.id === id);
   if (!x) return;
+  if (mode === 'rest') { CR = Object.assign(CR0(), {part: CR.part, wake: CR.wake}, crTrip(x)); save('calcRest', CR); go('calc', mode); return; }
   if (mode === 'vu') { VU.w = x.weight; VU.ax = x.axles || ''; save('vu45', VU); } else { SH.w = x.weight; SH.ax = x.axles || ''; save('calcShoe', SH); }
   go('calc', mode);
 }
@@ -923,18 +924,25 @@ const CR0 = () => ({a: '', b: '', r: '', part: '0.5', wake: '60'});
 let CR = load('calcRest', CR0());
 function crSet(key, value) { CR[key] = value; save('calcRest', CR); crCalc(); }
 function crClear() { CR = Object.assign(CR0(), {part: CR.part, wake: CR.wake}); save('calcRest', CR); crRender(); }
+// явка - из незавершённой поездки в учёте часов (самой поздней)
+const crTrip = x => ({a: x.start.slice(11, 16)});
+const crOpen = () => HRS.shifts.filter(x => !x.end).reduce((m, x) => !m || x.start > m.start ? x : m, null);
+function crFromTrip() { const x = crOpen(); if (x) { CR = Object.assign(CR, crTrip(x)); save('calcRest', CR); crRender(); } }
 function crRender() {
   $('crA').value = CR.a; $('crB').value = CR.b; $('crR').value = CR.r; $('crPart').value = CR.part; $('crWake').value = CR.wake;
   crCalc();
 }
 function crCalc() {
+  const t = crOpen(), ta = t && t.start.slice(11, 16);
+  $('crFrom').innerHTML = t && ta !== CR.a ? `<button class="linkbtn" onclick="crFromTrip()">Взять явку из учёта часов: ${dt(t.start)}</button>` : '';
   const a = clock(CR.a), b = clock(CR.b), work = a === null || b === null ? 0 : (b - a + 1440) % 1440;
   if (!work) { $('crOut').innerHTML = `<div class="card empty">Укажите время явки и окончания работы.</div>`; return; }
-  const rest = Math.ceil(work * (+CR.part || .5)), rc = clock(CR.r), from = b + (rc === null ? 0 : (rc - b + 1440) % 1440);
+  const sub = CR.part === 's', rest = sub ? Math.min(60, work) : Math.ceil(work * (+CR.part || .5)), rc = clock(CR.r), from = b + (rc === null ? 0 : (rc - b + 1440) % 1440);
   const till = from + rest, wake = till - int(CR.wake), day = Math.floor(till / 1440) - Math.floor(from / 1440);
   $('crOut').innerHTML = `<div class="card sum"><div class="big">${hhmm(till)} <small>явка не раньше, ${dayWord(day)} · отдых с ${hhmm(from)}</small></div>
-    <div class="stats" style="margin-top:14px"><div><small>Отработано</small><b>${hs(work)}</b></div><div><small>Отдых</small><b>${hs(rest)}</b></div>
+    <div class="stats" style="margin-top:14px"><div><small>Отработано</small><b>${hs(work)}</b></div><div><small>${sub ? 'Перерыв' : 'Отдых'}</small><b>${hs(rest)}</b></div>
       <div><small>Подъём</small><b>${hhmm(wake)}</b></div></div>
+    ${rest < work ? `<div class="verd">Отдых не дольше отработанного: явка не позже ${hhmm(from + work)}${Math.floor((from + work) / 1440) > Math.floor(from / 1440) ? ' ' + dayWord(Math.floor((from + work) / 1440) - Math.floor(from / 1440)) : ''}.</div>` : ''}
     ${work > 720 ? `<div class="verd warn">Непрерывная работа больше 12 часов - проверьте время.</div>` : ''}
     ${from - b > work ? `<div class="verd warn">От окончания работы до начала отдыха больше, чем сама работа - проверьте время.</div>` : ''}</div>`;
 }
