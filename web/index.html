@@ -520,6 +520,8 @@ html.big{zoom:1.15}
     <h2>Поездки за месяц</h2>
     <div id="trips"></div>
     <button class="morebtn" id="csvBtn" style="margin-top:10px;display:none" onclick="exportTrips()">Выгрузить месяц в таблицу</button>
+    <button class="morebtn" style="margin-top:10px" onclick="moveFile(t => $('hoursSaved').textContent = t)">Сохранить копию в файл</button>
+    <p class="note" id="hoursSaved" style="margin-top:8px">Все поездки и данные сайта - одним файлом. Вернуть их: ⚙️ Настройки → «Загрузить файл».</p>
 
     <details class="fold" data-fold="pay">
       <summary>Оценка зарплаты <span id="paySum"></span><svg><use href="#i-chev"/></svg></summary>
@@ -2590,22 +2592,22 @@ async function moveCopy() {
   $('moveIn').value = code; $('moveIn').select();
   moveSay('Не получилось скопировать: код - в поле выше, выделите его и скопируйте вручную.');
 }
-async function moveFile() {
+async function moveFile(say = moveSay) {   // say - куда написать результат: по умолчанию в Настройках
   const code = await moveCode();
-  if (!code) return moveSay('Переносить пока нечего.');
+  if (!code) return say('Сохранять пока нечего.');
   const name = `rzd-assistant-data-${new Date().toISOString().slice(0, 10)}.txt`;
   if (TG && /^(ios|android)$/.test(TG.platform)) {   // в Telegram на телефоне файл сохраняется через «Поделиться»
     const f = new File([code], name, {type: 'text/plain'});
     try { if (navigator.canShare && navigator.canShare({files: [f]})) return await navigator.share({files: [f], title: name}); }
     catch (e) { if (e.name === 'AbortError') return; }
-    return moveCopy();
+    return say === moveSay ? moveCopy() : say('Не получилось сохранить файл: в Настройках нажмите «Скопировать код» и сохраните код в заметках.');
   }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([code], {type: 'text/plain'}));
   a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  moveSay('Файл сохранён. На другом устройстве нажмите «Загрузить файл».');
+  say('Файл сохранён. Чтобы вернуть данные, в Настройках нажмите «Загрузить файл».');
 }
 async function moveLoad(input) {
   const f = input.files[0]; input.value = '';
