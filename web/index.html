@@ -672,6 +672,7 @@ html.big{zoom:1.15}
   <!-- Расписание электричек: открывается на Яндекс Расписаниях, свои маршруты запоминаются -->
   <section class="view" id="v-train">
     <h1>Электрички</h1><p class="sub">Расписание пригородных поездов между станциями.</p>
+    <div class="card list" id="tQuick" style="margin-bottom:12px" hidden></div>
     <form class="card form" onsubmit="event.preventDefault();trainGo()">
       <label class="stsel">Откуда<input class="inp" id="tFrom" autocomplete="off" placeholder="выберите станцию" onfocus="stOpen(this)" oninput="stOpen(this)" onblur="setTimeout(stClose,150)"><div class="stlist" id="tFromL"></div></label>
       <button type="button" class="linkbtn" style="justify-self:start" onclick="trainSwap()">⇅ Поменять местами</button>
@@ -682,7 +683,12 @@ html.big{zoom:1.15}
     </form>
     <h2 id="tRoutesH">Мои маршруты</h2>
     <div class="card list" id="tRoutes"></div>
-    <p class="note">Расписание открывается на сайте Яндекс Расписаний в новой вкладке. Маршруты хранятся только в этом браузере.</p>
+    <h2>Дом и работа</h2>
+    <div class="card form">
+      <label class="stsel">Станция у дома<input class="inp" id="tHome" autocomplete="off" placeholder="выберите станцию" onfocus="stOpen(this)" oninput="stOpen(this);trainPlace()" onblur="setTimeout(stClose,150);trainPlace()"><div class="stlist" id="tHomeL"></div></label>
+      <label class="stsel">Станция у депо<input class="inp" id="tWork" autocomplete="off" placeholder="выберите станцию" onfocus="stOpen(this)" oninput="stOpen(this);trainPlace()" onblur="setTimeout(stClose,150);trainPlace()"><div class="stlist" id="tWorkL"></div></label>
+    </div>
+    <p class="note">Укажите станции у дома и у депо - вверху появятся кнопки «На работу» и «Домой». День подставляется из «Учёта часов»: если записана явка на завтра, расписание откроется на завтра. Расписание открывается на сайте Яндекс Расписаний в новой вкладке. Маршруты хранятся только в этом браузере.</p>
   </section>
 
   <!-- Сроки -->
@@ -1742,13 +1748,32 @@ function stOpen(inp) {
     : '<small>Нет в списке - можно оставить как написано</small>';
   L.classList.add('on');
 }
-function stPick(id, n) { $(id).value = n; stClose(); }
-function stClose() { ['tFromL', 'tToL'].forEach(i => $(i).classList.remove('on')); }
+function stPick(id, n) { $(id).value = n; stClose(); if (id === 'tHome' || id === 'tWork') trainPlace(); }
+function stClose() { ['tFromL', 'tToL', 'tHomeL', 'tWorkL'].forEach(i => $(i).classList.remove('on')); }
+function trainPlace() {   // станции у дома и у депо
+  const h = $('tHome').value.trim(), w = $('tWork').value.trim();
+  if (h === (TR.home || '') && w === (TR.work || '')) return;
+  TR.home = h; TR.work = w; save('trains', TR); trainQuick();
+}
+function trainQuick() {   // «На работу» и «Домой»; день - по явке из учёта часов
+  const h = TR.home, w = TR.work, now = new Date(), today = iso(now), tom = iso(new Date(+now + 864e5));
+  if (!h || !w || stNorm(h) === stNorm(w)) { $('tQuick').hidden = true; return; }
+  const next = HRS.shifts.filter(x => new Date(x.start) > now).sort((a, b) => a.start < b.start ? -1 : 1)[0];   // ближайшая явка
+  const day = next && next.start.slice(0, 10) === tom ? 1 : 0, ahead = next && [today, tom].includes(next.start.slice(0, 10));
+  const last = HRS.shifts.filter(x => x.end && new Date(x.end) <= now).sort((a, b) => a.end < b.end ? 1 : -1)[0];
+  const justDone = last && now - new Date(last.end) < 12 * 3600e3 && !(next && new Date(next.start) - now < 3 * 3600e3);   // поездка кончилась недавно - сначала «Домой»
+  const item = (from, to, d, title, sub) => `<button class="item dir" data-a="${esc(from)}" data-b="${esc(to)}" onclick="trainOpen(this.dataset.a,this.dataset.b,${d})">
+    <span class="badge" style="--c:var(--cyan)">${ic('train')}</span><span><b>${title}</b><small>${esc(sub)}</small></span><span class="go">${ic('chev')}</span></button>`;
+  const toWork = item(h, w, day, 'На работу', `${h} → ${w}` + (ahead ? ` · явка ${day ? 'завтра' : 'сегодня'} в ${next.start.slice(11, 16)}` : ''));
+  const home = item(w, h, 0, 'Домой', `${w} → ${h}` + (justDone ? ` · поездка закончилась в ${last.end.slice(11, 16)}` : ''));
+  $('tQuick').innerHTML = justDone ? home + toWork : toWork + home; $('tQuick').hidden = false;
+}
 const TR = load('trains', {routes: [], day: 0});
 function trainDay(d) { TR.day = d; save('trains', TR); [0, 1].forEach(i => $('tw-' + i).classList.toggle('on', i === d)); }
 function trainSwap() { const a = $('tFrom').value; $('tFrom').value = $('tTo').value; $('tTo').value = a; }
-function trainOpen(from, to) {
-  openLink(`https://rasp.yandex.ru/search/suburban/?fromName=${encodeURIComponent(from)}&toName=${encodeURIComponent(to)}&when=${TR.day ? 'завтра' : 'сегодня'}`);
+function trainOpen(from, to, day) {
+  if (day === undefined) day = TR.day;
+  openLink(`https://rasp.yandex.ru/search/suburban/?fromName=${encodeURIComponent(from)}&toName=${encodeURIComponent(to)}&when=${day ? 'завтра' : 'сегодня'}`);
 }
 function trainGo() {
   const from = $('tFrom').value.trim(), to = $('tTo').value.trim();
@@ -1763,8 +1788,11 @@ function trainRender() {
   $('tRoutesH').style.display = $('tRoutes').style.display = TR.routes.length ? '' : 'none';
   $('tRoutes').innerHTML = TR.routes.map(([a, b], i) => `<div class="item"><button style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;text-align:left" data-a="${esc(a)}" data-b="${esc(b)}" onclick="trainOpen(this.dataset.a,this.dataset.b)">
     <span class="badge" style="--c:var(--cyan)">${ic('train')}</span><span style="min-width:0"><b>${esc(a)} → ${esc(b)}</b><small>открыть расписание</small></span></button>
+    <button class="xbtn" data-a="${esc(b)}" data-b="${esc(a)}" onclick="trainOpen(this.dataset.a,this.dataset.b)" aria-label="Обратно: ${esc(b)} → ${esc(a)}" title="Обратно">⇄</button>
     <button class="xbtn" onclick="trainDrop(${i})" aria-label="Удалить маршрут">✕</button></div>`).join('');
-  $('tileTrain').textContent = TR.routes.length ? `${TR.routes[0][0]} → ${TR.routes[0][1]}` : 'расписание';
+  $('tileTrain').textContent = TR.home && TR.work ? `${TR.home} ⇄ ${TR.work}` : TR.routes.length ? `${TR.routes[0][0]} → ${TR.routes[0][1]}` : 'расписание';
+  $('tHome').value = TR.home || ''; $('tWork').value = TR.work || '';
+  trainQuick();
 }
 
 function renderDates() {
