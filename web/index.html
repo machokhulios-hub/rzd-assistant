@@ -443,9 +443,10 @@ html.big{zoom:1.15}
         <label>Номер поезда<input class="inp" id="tTrain" autocomplete="off" maxlength="12" inputmode="numeric" placeholder="например, 2345"></label>
       </div>
       <div class="two keep">
-        <label>Вес, тс<input class="inp" id="tW" autocomplete="off" maxlength="8" inputmode="decimal" placeholder="например, 5200"></label>
-        <label>Оси<input class="inp" id="tAx" autocomplete="off" maxlength="5" inputmode="numeric" placeholder="например, 280"></label>
+        <label>Вес, тс<input class="inp" id="tW" oninput="preview()" autocomplete="off" maxlength="8" inputmode="decimal" placeholder="например, 5200"></label>
+        <label>Оси<input class="inp" id="tAx" oninput="preview()" autocomplete="off" maxlength="5" inputmode="numeric" placeholder="например, 280"></label>
       </div>
+      <div class="pre" id="sFromVu"></div>
       <button type="button" class="tog" onclick="toggleEn()"><span class="sw" id="enSw"></span>Счётчики электроэнергии</button>
       <div id="enBox" style="display:none;gap:12px">
         <div class="two keep">
@@ -459,9 +460,12 @@ html.big{zoom:1.15}
         <div class="pre">Показания при сдаче можно дописать после поездки. Расход и рекуперацию посчитаю как разницу показаний.</div>
       </div>
       <button type="button" class="tog" onclick="toggleRest()"><span class="sw" id="restSw"></span>Был отдых в пункте оборота</button>
-      <div class="two" id="restBox" style="display:none">
-        <label>Начало отдыха<input type="datetime-local" id="rStart" oninput="preview()"></label>
-        <label>Конец отдыха<input type="datetime-local" id="rEnd" oninput="preview()"></label>
+      <div id="restBox" style="display:none;gap:12px">
+        <div class="two">
+          <label>Начало отдыха<input type="datetime-local" id="rStart" oninput="preview()"></label>
+          <label>Конец отдыха<input type="datetime-local" id="rEnd" oninput="preview()"></label>
+        </div>
+        <div class="pre" id="rFromCr"></div>
       </div>
       <div class="pre" id="sPre"></div>
       <div class="err" id="sErr"></div>
@@ -488,7 +492,7 @@ html.big{zoom:1.15}
       <div class="card" id="payOut" style="margin-top:12px;overflow:hidden"></div>
       <p class="note">Это оценка по записанным поездкам, а не расчётный листок. Тариф - ставка × часы. Ночные - доплата к ставке за часы с 22:00 до 06:00. Праздничные часы оплачиваются в двойном размере. Сверхурочные - часы сверх нормы месяца (без праздничных): первые два в полуторном размере, остальные в двойном. Премия считается от тарифа, районный коэффициент и надбавки - от всей суммы, НДФЛ - 13 %. В депо учётный период, доплаты и премия считаются по своим правилам - сверяйте с расчётным листком.</p>
     </details>
-    <p class="note">Поездки хранятся только в этом браузере на этом устройстве. Расчёт по приказу Минтранса № 339: отдых дома = рабочее время × 2,6 − отдых в пункте оборота, не меньше 16 часов. Ночные часы - с 22:00 до 06:00. В вашем депо могут действовать свои нормы - сверяйте с маршрутом и табелем.</p>
+    <p class="note">Поездки хранятся только в этом браузере на этом устройстве. Расчёт по приказу Минтранса № 339: отдых дома = рабочее время × 2,6 − отдых в пункте оборота, не меньше 16 часов. Отдых в пункте оборота - не меньше половины работы до него (при многократном обороте пригородного поезда - не меньше 1 часа) и не дольше этой работы. Вес и оси можно взять из справки ВУ-45, отдых в обороте - из Бригадника, если там та же явка. Ночные часы - с 22:00 до 06:00. В вашем депо могут действовать свои нормы - сверяйте с маршрутом и табелем.</p>
   </section>
 
   <!-- Калькулятор: отдых в бригаднике, справка ВУ-45 -->
@@ -734,7 +738,7 @@ function go(view, arg, back) {
   document.body.classList.toggle('docked', view === 'search');
   window.scrollTo(0, 0);
   if (view === 'search' && !$('q').value) $('q').focus();
-  if (view === 'hours') loadHours();
+  if (view === 'hours') { loadHours(); preview(); }   // подсказки «взять из ВУ-45 / Бригадника» - по свежим данным
   if (view === 'calc') calcMode(arg, arg !== undefined);
   if (view === 'docs') renderDocs(arg);
   if (view === 'dates') renderDates();
@@ -803,15 +807,31 @@ function renderHours(r) {
 }
 function toggleRest() {
   restOn = !restOn;
-  $('restSw').classList.toggle('on', restOn); $('restBox').style.display = restOn ? '' : 'none';
+  $('restSw').classList.toggle('on', restOn); $('restBox').style.display = restOn ? 'grid' : 'none';
   preview();
 }
+// подстановки в форму поездки: вес и оси - из справки ВУ-45, отдых в пункте оборота - из Бригадника (если явка та же)
+const addMin = (s, m) => new Date((tm(s) + m) * 60000).toISOString().slice(0, 16);
+function crForTrip() {
+  const a = $('sStart').value.slice(0, 16), pl = crPlan();
+  if (!a || !pl || a.slice(11, 16) !== CR.a) return null;
+  const rs = addMin(a, pl.work + pl.gap);
+  return {rs, re: addMin(rs, pl.rest)};
+}
+function fillFromVu() { $('tW').value = VU.w; $('tAx').value = VU.ax; preview(); }
+function fillFromCr() { const c = crForTrip(); if (c) { $('rStart').value = c.rs; $('rEnd').value = c.re; preview(); } }
 function preview() {
   const a = $('sStart').value, b = $('sEnd').value, ra = restOn && $('rStart').value, rb = restOn && $('rEnd').value;
+  const vw = String(VU.w || '').trim(), vax = String(VU.ax || '').trim();
+  $('sFromVu').innerHTML = num(vw) && (vw !== $('tW').value.trim() || vax !== $('tAx').value.trim()) ?
+    `<button type="button" class="linkbtn" onclick="fillFromVu()">Взять из ВУ-45: ${esc(vw)} тс${vax ? ', ' + esc(vax) + ' осей' : ''}</button>` : '';
+  const c = restOn && crForTrip();
+  $('rFromCr').innerHTML = c && (c.rs !== ra || c.re !== rb) ? `<button type="button" class="linkbtn" onclick="fillFromCr()">Взять из Бригадника: ${dt(c.rs)} - ${dt(c.re)}</button>` : '';
   $('sErr').textContent = '';
   if (!a || !b || mins(a, b) <= 0 || (restOn && !(ra && rb))) { $('sPre').textContent = ''; return; }
-  const rest = restOn ? Math.max(0, mins(ra, rb)) : 0, work = mins(a, b) - rest;
-  $('sPre').innerHTML = `Рабочее время <b>${hm(work)}</b> · отдых дома не меньше <b>${hm(Math.max(960, Math.round(work * 2.6) - rest))}</b>`;
+  const x = tripCalc({start: a.slice(0, 16), end: b.slice(0, 16), rest_start: restOn ? ra.slice(0, 16) : '', rest_end: restOn ? rb.slice(0, 16) : ''});
+  $('sPre').innerHTML = `Рабочее время <b>${hm(x.work)}</b> · отдых дома не меньше <b>${hm(x.home)}</b>` +
+    x.warn.map(w => `<br><span style="color:var(--amber)">${esc(w)}</span>`).join('');
 }
 let EDIT = 0;   // номер поездки, которую сейчас изменяют в форме
 function addShift() {
@@ -932,12 +952,18 @@ function crRender() {
   $('crA').value = CR.a; $('crB').value = CR.b; $('crR').value = CR.r; $('crPart').value = CR.part; $('crWake').value = CR.wake;
   crCalc();
 }
+function crPlan() {   // минуты: b - окончание работы (от полуночи), gap - от окончания работы до начала отдыха; null - не заполнено
+  const a = clock(CR.a), b = clock(CR.b), work = a === null || b === null ? 0 : (b - a + 1440) % 1440;
+  if (!work) return null;
+  const sub = CR.part === 's', rc = clock(CR.r);
+  return {a, b, work, sub, rest: sub ? Math.min(60, work) : Math.ceil(work * (+CR.part || .5)), gap: rc === null ? 0 : (rc - b + 1440) % 1440};
+}
 function crCalc() {
   const t = crOpen(), ta = t && t.start.slice(11, 16);
   $('crFrom').innerHTML = t && ta !== CR.a ? `<button class="linkbtn" onclick="crFromTrip()">Взять явку из учёта часов: ${dt(t.start)}</button>` : '';
-  const a = clock(CR.a), b = clock(CR.b), work = a === null || b === null ? 0 : (b - a + 1440) % 1440;
-  if (!work) { $('crOut').innerHTML = `<div class="card empty">Укажите время явки и окончания работы.</div>`; return; }
-  const sub = CR.part === 's', rest = sub ? Math.min(60, work) : Math.ceil(work * (+CR.part || .5)), rc = clock(CR.r), from = b + (rc === null ? 0 : (rc - b + 1440) % 1440);
+  const pl = crPlan();
+  if (!pl) { $('crOut').innerHTML = `<div class="card empty">Укажите время явки и окончания работы.</div>`; return; }
+  const {b, work, sub, rest} = pl, from = b + pl.gap;
   const till = from + rest, wake = till - int(CR.wake), day = Math.floor(till / 1440) - Math.floor(from / 1440);
   $('crOut').innerHTML = `<div class="card sum"><div class="big">${hhmm(till)} <small>явка не раньше, ${dayWord(day)} · отдых с ${hhmm(from)}</small></div>
     <div class="stats" style="margin-top:14px"><div><small>Отработано</small><b>${hs(work)}</b></div><div><small>${sub ? 'Перерыв' : 'Отдых'}</small><b>${hs(rest)}</b></div>
@@ -1144,7 +1170,10 @@ function tripCalc(x, lo = -Infinity, hi = Infinity) {   // lo/hi - границ�
   const work = sum((p, q) => q - p), rest = x.rest_start ? tm(x.rest_end) - tm(x.rest_start) : 0;
   const home = Math.max(MIN_HOME, Math.round(work * K_HOME) - rest), warn = [];
   if (segs.some(([p, q]) => q - p > MAX_CONT)) warn.push('Непрерывная работа больше 12 часов');
-  if (rest && rest < (segs[0][1] - segs[0][0]) / 2) warn.push('Отдых в пункте оборота меньше половины работы до него');
+  const before = segs[0][1] - segs[0][0];
+  if (rest && rest < before / 2) warn.push(rest >= 60 ? 'Отдых в пункте оборота меньше половины работы до него - так можно только при многократном обороте пригородного поезда'
+    : 'Отдых в пункте оборота меньше половины работы до него и меньше 1 часа');
+  if (rest > before) warn.push('Отдых в пункте оборота дольше работы до него');
   return Object.assign({}, x, {work, rest, home, warn, night: sum((p, q) => night(p, q, -Infinity, Infinity)),
     next: new Date((b + home) * 60000).toISOString().slice(0, 16),
     month_work: sum((p, q) => clip(p, q, lo, hi)), month_night: sum((p, q) => night(p, q, lo, hi)), month_hol: sum((p, q) => holiday(p, q, lo, hi))});
