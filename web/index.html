@@ -198,7 +198,7 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line);width:100%;text-align:left}
 a.item{color:inherit;text-decoration:none}
 .item:first-child{border-top:0}
-.item .badge{width:38px;height:38px;border-radius:12px;font-size:19px}
+.item .badge{width:38px;height:38px;border-radius:12px;font-size:19px;flex:none}
 .item>span:nth-child(2){min-width:0}
 .item b{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .item small{color:var(--muted);font-size:12.5px}
@@ -653,15 +653,21 @@ html.big{zoom:1.15}
   <section class="view" id="v-dates">
     <h1>Сроки</h1><p class="sub">Медкомиссия, экзамены, допуски - сколько осталось до каждой даты.</p>
     <form class="card form" onsubmit="event.preventDefault();dateAdd()">
-      <label>Что истекает<input class="inp" id="dName" list="dNames" autocomplete="off" placeholder="например, медицинская комиссия"></label>
-      <datalist id="dNames"><option value="Медицинская комиссия"><option value="Психофизиологическое обследование"><option value="Проверка знаний ПТЭ"><option value="Заключение машиниста-инструктора"><option value="Проверка знаний по охране труда"><option value="Группа по электробезопасности"></datalist>
+      <label>Что истекает<input class="inp" id="dName" list="dNames" oninput="dateName()" autocomplete="off" placeholder="например, медицинская комиссия"></label>
+      <datalist id="dNames"><option value="Медицинская комиссия"><option value="Психофизиологическое обследование"><option value="Проверка знаний ПТЭ"><option value="Аттестация"><option value="Заключение машиниста-инструктора"><option value="Проверка знаний по охране труда"><option value="Группа по электробезопасности"></datalist>
+      <div class="two keep">
+        <label>Когда пройдено<input type="date" id="dDone" oninput="dateCalc()"></label>
+        <label>Повторять<select class="inp" id="dEvery" onchange="dAuto=false;dateCalc()"><option value="">не повторять</option><option value="3">раз в 3 месяца</option><option value="6">раз в полгода</option>
+          <option value="12">раз в год</option><option value="24">раз в 2 года</option><option value="36">раз в 3 года</option><option value="60">раз в 5 лет</option></select></label>
+      </div>
       <label>Действует до<input type="date" id="dDate"></label>
+      <div class="pre" id="dHint"></div>
       <div class="err" id="dErr"></div>
       <button class="btn">Добавить</button>
     </form>
     <h2>Мои сроки</h2>
     <div id="dates"></div>
-    <p class="note">Сроки хранятся только в этом браузере на этом устройстве. Напоминаний сайт не присылает - заглядывайте сюда сами.</p>
+    <p class="note">Укажите, когда пройдено, и как часто повторять - дату окончания посчитаю сама, а периодичность запомню для этого названия. «Пройдено заново» продлевает срок от сегодняшнего дня. Для проверки знаний по охране труда периодичность подставляется по постановлению Правительства № 2464; для остальных сроков укажите её по своему удостоверению или справке - нормы зависят от должности и возраста. Сроки хранятся только в этом браузере на этом устройстве. Напоминаний сайт не присылает - заглядывайте сюда сами.</p>
   </section>
 
   <!-- Билеты -->
@@ -1543,12 +1549,42 @@ const DL = load('deadlines', {items: [], seq: 0});
 const daysLeft = s => Math.round((utc(s) - utc(iso(new Date()))) / 864e5);
 const dueText = n => n < 0 ? `просрочено на ${-n} ${plural(-n, 'день', 'дня', 'дней')}` : n === 0 ? 'истекает сегодня' : `${plural(n, 'остался', 'осталось', 'осталось')} ${n} ${plural(n, 'день', 'дня', 'дней')}`;
 const dueCls = n => n < 0 ? 'late' : n <= 30 ? 'soon' : 'ok';
+// периодичность в месяцах: подтверждённые нормы и то, что пользователь уже указывал для этого названия
+const DL_NORM = [[/охран\S* труда/i, 36, 'Охрана труда: проверка знаний не реже раза в 3 года, для работ повышенной опасности - раз в год (постановление Правительства № 2464).']];
+const dlKey = n => n.trim().toLowerCase().replace(/ё/g, 'е');
+const addMonths = (s, m) => {   // та же дата через m месяцев; 31-е число в коротком месяце - последний день
+  const y = +s.slice(0, 4), mo = +s.slice(5, 7) - 1 + m, d = +s.slice(8, 10), last = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, mo, Math.min(d, last))).toISOString().slice(0, 10);
+};
+const everyText = m => ({3: 'раз в 3 месяца', 6: 'раз в полгода', 12: 'раз в год', 24: 'раз в 2 года', 36: 'раз в 3 года', 60: 'раз в 5 лет'})[m] || `раз в ${m} мес.`;
+let dAuto = false;   // периодичность подставлена по названию (а не выбрана вручную) - при смене названия её можно убрать
+function dateName() {   // название выбрано - подставляю периодичность
+  const k = dlKey($('dName').value), mine = (DL.every || {})[k], norm = DL_NORM.find(([re]) => re.test(k));
+  const m = mine || (norm && norm[1]);
+  if (m && $('dEvery').querySelector(`option[value="${m}"]`)) { $('dEvery').value = String(m); dAuto = true; }
+  else if (dAuto) { $('dEvery').value = ''; dAuto = false; }
+  $('dHint').textContent = norm ? norm[2] : mine ? `Периодичность «${everyText(mine)}» - как вы указывали раньше.` : '';
+  dateCalc();
+}
+function dateCalc() {
+  const done = $('dDone').value, m = +$('dEvery').value;
+  if (/^\d{4}-\d\d-\d\d$/.test(done) && m) $('dDate').value = addMonths(done, m);
+}
 function dateAdd() {
-  const name = $('dName').value.trim(), date = $('dDate').value;
-  if (!name || !/^\d{4}-\d\d-\d\d$/.test(date)) { $('dErr').textContent = 'Укажите название и дату.'; return; }
-  DL.items.push({id: ++DL.seq, name, date}); save('deadlines', DL);
-  $('dName').value = $('dDate').value = $('dErr').textContent = '';
+  const name = $('dName').value.trim(), date = $('dDate').value, done = $('dDone').value, every = +$('dEvery').value || 0;
+  if (!name || !/^\d{4}-\d\d-\d\d$/.test(date)) { $('dErr').textContent = 'Укажите название и дату окончания - или когда пройдено и как часто повторять.'; return; }
+  DL.items.push(Object.assign({id: ++DL.seq, name, date}, /^\d{4}-\d\d-\d\d$/.test(done) ? {done} : {}, every ? {every} : {}));
+  if (every) (DL.every = DL.every || {})[dlKey(name)] = every;
+  save('deadlines', DL);
+  $('dName').value = $('dDate').value = $('dDone').value = $('dEvery').value = $('dErr').textContent = $('dHint').textContent = '';
+  dAuto = false;
   renderDates();
+}
+function dateRenew(id) {   // пройдено заново сегодня - срок продлевается на тот же период
+  const x = DL.items.find(t => t.id === id);
+  if (!x || !x.every) return;
+  const today = iso(new Date()), till = addMonths(today, x.every);
+  ask(`${x.name}: пройдено сегодня? Срок продлится до ${dmy(till)}.`, () => { x.done = today; x.date = till; save('deadlines', DL); renderDates(); });
 }
 function dateDel(id) {
   ask('Удалить срок?', () => { DL.items = DL.items.filter(x => x.id !== id); save('deadlines', DL); renderDates(); });
@@ -1593,7 +1629,8 @@ function trainRender() {
 function renderDates() {
   const d = DL.items.slice().sort((a, b) => a.date < b.date ? -1 : 1), color = {late: 'red', soon: 'amber', ok: 'green'};
   $('dates').innerHTML = d.length ? `<div class="card list">` + d.map(x => { const n = daysLeft(x.date), c = dueCls(n); return `<div class="item">
-    <span class="badge" style="--c:var(--${color[c]})">${ic('bell')}</span><span><b>${esc(x.name)}</b><small>до ${dmy(x.date)} · <span class="due ${c}">${dueText(n)}</span></small></span>
+    <span class="badge" style="--c:var(--${color[c]})">${ic('bell')}</span><span><b>${esc(x.name)}</b><small>до ${dmy(x.date)} · <span class="due ${c}">${dueText(n)}</span></small>
+      ${x.every ? `<small style="display:block">${x.done ? `пройдено ${dmy(x.done)} · ` : ''}${everyText(x.every)} · <button class="linkbtn" onclick="dateRenew(${x.id})">Пройдено заново</button></small>` : ''}</span>
     <button class="xbtn" onclick="dateDel(${x.id})" aria-label="Удалить срок">✕</button></div>`; }).join('') + `</div>` : `<div class="card empty">Сроков пока нет.</div>`;
   $('tileDates').textContent = d.length ? `${d[0].name}: ${dueText(daysLeft(d[0].date))}` : 'медкомиссия, экзамены';
 }
