@@ -485,7 +485,6 @@ html.big{zoom:1.15}
     <div class="mon"><button onclick="shiftMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
       <span class="msel"><select class="inp" id="monSel" onchange="pickMonth()" aria-label="Месяц"></select><select class="inp" id="yearSel" onchange="pickMonth()" aria-label="Год"></select></span><button onclick="shiftMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
     <div id="hoursSum"></div>
-    <div id="prodCal"></div>
 
     <h2 id="tripTitle">Добавить поездку</h2>
     <form class="card form" onsubmit="event.preventDefault();addShift()">
@@ -516,6 +515,7 @@ html.big{zoom:1.15}
       <button class="btn" id="sBtn">Записать поездку</button>
       <button type="button" class="linkbtn" id="sCancel" style="display:none" onclick="editShift(0)">Отменить изменение</button>
     </form>
+    <div id="hoursNext"></div>
 
     <h2>Поездки за месяц</h2>
     <div id="trips"></div>
@@ -536,6 +536,7 @@ html.big{zoom:1.15}
       <div class="card" id="payOut" style="margin-top:12px;overflow:hidden"></div>
       <p class="note">Это оценка по записанным поездкам, а не расчётный листок. Тариф - ставка × часы. Ночные - доплата к ставке за часы с 22:00 до 06:00. Праздничные часы оплачиваются в двойном размере. Сверхурочные - часы сверх нормы месяца (без праздничных): первые два в полуторном размере, остальные в двойном. Премия считается от тарифа, районный коэффициент и надбавки - от всей суммы, НДФЛ - 13 %. В депо учётный период, доплаты и премия считаются по своим правилам - сверяйте с расчётным листком.</p>
     </details>
+    <div id="prodCal"></div>
     <p class="note">Поездки хранятся только в этом браузере на этом устройстве. Расчёт по приказу Минтранса № 339: отдых дома = рабочее время × 2,6 − отдых в пункте оборота, не меньше 16 часов. Отдых в пункте оборота - не меньше половины работы до него (при многократном обороте пригородного поезда - не меньше 1 часа) и не дольше этой работы. Вес и оси можно взять из справки ВУ-45, отдых в обороте - из Бригадника, если там та же явка. Ночные часы - с 22:00 до 06:00. В вашем депо могут действовать свои нормы - сверяйте с маршрутом и табелем.</p>
   </section>
 
@@ -873,8 +874,8 @@ function renderHours(r) {
       <div class="prog ${over ? 'over' : ''}"><i style="width:${norm ? Math.min(100, r.work / norm * 100) : 0}%"></i>${cur && norm ? `<em style="left:${Math.min(100, today / norm * 100)}%"></em>` : ''}</div>
       <div class="stats"><div><small>${over ? 'Переработка' : 'До нормы'}</small><b>${hs(left)}</b></div>
         <div><small>Ночные</small><b>${hs(r.night)}</b></div><div><small>Поездок</small><b>${r.items.length}</b></div></div>
-      <div class="normf">Норма по производственному календарю (40-часовая неделя)</div></div>` +
-    (r.last ? `<div class="card next"><span class="badge" style="--c:var(--green)">${ic('clock')}</span><span><small>Следующая явка не раньше</small>
+      <div class="normf">Норма по производственному календарю (40-часовая неделя)</div></div>`;
+  $('hoursNext').innerHTML = (r.last ? `<div class="card next"><span class="badge" style="--c:var(--green)">${ic('clock')}</span><span><small>Следующая явка не раньше</small>
       <b>${dt(r.last.next)}</b><small>отдых дома ${hm(r.last.home)} после поездки ${dt(r.last.start)}</small></span></div>` : '');
   prodCal(r.ym);
   $('csvBtn').style.display = r.items.length || r.open.length ? '' : 'none';
