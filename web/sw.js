@@ -29,7 +29,7 @@ async function cacheFirst(req) {
 self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin || url.pathname.includes('/auth/')) return;   // вход и регистрация - только из сети
-  const fresh = req.mode === 'navigate' || /\/$|\/(index\.html|meta\.json|tickets\.json|sw\.js)$/.test(url.pathname);
+  const fresh = req.mode === 'navigate' || /\/$|\/(index\.html|pdf\.html|meta\.json|tickets\.json|sw\.js)$/.test(url.pathname);
   e.respondWith(fresh ? netFirst(url, req.mode === 'navigate') : cacheFirst(req));
 });
 // после пересборки сайта страница просит убрать индекс прошлой сборки

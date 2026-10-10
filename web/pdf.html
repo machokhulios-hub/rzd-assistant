@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
+<title>Документ</title>
+<style>
+/* PDF на сайте: страницы рисуются как в оригинале, на белом листе - и в тёмной теме; файл не скачивается */
+:root{color-scheme:light}
+html,body{margin:0;background:#e9eaee;color:#111;font:15px/1.4 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+#pages{max-width:900px;margin:0 auto;padding:8px 0 70px}
+.pg{position:relative;margin:0 auto 8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.pg canvas{display:block;width:100%;height:100%}
+#msg{padding:40px 16px;text-align:center;color:#555}
+#num{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(20,22,28,.78);color:#fff;font-weight:600;font-size:13px;padding:6px 12px;border-radius:14px;pointer-events:none;transition:opacity .3s}
+</style>
+</head>
+<body>
+<div id="pages"><div id="msg">Открываю документ…</div></div>
+<div id="num" style="opacity:0"></div>
+<script type="module">
+import * as pdfjs from './pdfjs/pdf.min.mjs';
+pdfjs.GlobalWorkerOptions.workerSrc = './pdfjs/pdf.worker.min.mjs';
+
+const q = new URLSearchParams(location.search), file = q.get('f') || '', box = document.getElementById('pages'), num = document.getElementById('num');
+const start = +(location.hash.match(/page=(\d+)/) || [])[1] || 1;
+const say = t => box.innerHTML = `<div id="msg">${t}</div>`;
+if (!/^files\/[^?#]+\.pdf$/i.test(file) || file.includes('..')) say('Документ не найден.');
+else open();
+
+async function open() {
+  let doc;
+  try {
+    // целиком одним запросом - так файл ложится в память телефона и открывается без сети
+    doc = await pdfjs.getDocument({url: file.split('/').map(encodeURIComponent).join('/'), disableRange: true, disableStream: true, cMapUrl: './pdfjs/cmaps/', cMapPacked: true, standardFontDataUrl: './pdfjs/standard_fonts/'}).promise;
+  } catch (e) { return say('Не удалось открыть документ. Проверьте связь и попробуйте ещё раз.'); }
+  document.title = decodeURIComponent(file.split('/').pop()).replace(/\.pdf$/i, '').replace(/[_\s]+/g, ' ');
+  // размеры всех страниц сразу: заготовки не меняют высоту при отрисовке, и прыжок на страницу не съезжает
+  const sizes = await Promise.all(Array.from({length: doc.numPages}, (_, i) => doc.getPage(i + 1).then(p => p.getViewport({scale: 1}))));
+  box.innerHTML = '';
+  const pages = sizes.map((v, i) => {
+    const d = document.createElement('div');
+    d.className = 'pg'; d.dataset.n = i + 1; d.style.aspectRatio = `${v.width} / ${v.height}`;
+    return box.appendChild(d);
+  });
+  const width = () => Math.min(box.clientWidth, 900);
+  const fit = () => pages.forEach(d => d.style.width = width() + 'px');
+  fit(); addEventListener('resize', fit);
+
+  const drawn = new Map();   // номер -> задача отрисовки; далёкие страницы стираем, чтобы телефону хватало памяти
+  async function draw(d) {
+    const n = +d.dataset.n;
+    if (drawn.has(n)) return;
+    const c = document.createElement('canvas');
+    drawn.set(n, c);
+    const page = await doc.getPage(n), v = page.getViewport({scale: 1});
+    const scale = width() / v.width * Math.min(3, (devicePixelRatio || 1) * 1.5), vp = page.getViewport({scale});
+    c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+    try { await page.render({canvasContext: c.getContext('2d'), viewport: vp}).promise; } catch (e) { drawn.delete(n); return; }
+    if (drawn.get(n) === c) d.appendChild(c);
+  }
+  function drop(d) {
+    const n = +d.dataset.n, c = drawn.get(n);
+    if (!c) return;
+    drawn.delete(n); c.width = c.height = 0; c.remove();
+  }
+  const near = new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? draw(e.target) : drop(e.target)), {rootMargin: '150% 0px'});
+  pages.forEach(d => near.observe(d));
+
+  let hide;
+  const seen = new IntersectionObserver(es => {
+    const e = es.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (!e) return;
+    num.textContent = `${e.target.dataset.n} / ${doc.numPages}`; num.style.opacity = 1;
+    clearTimeout(hide); hide = setTimeout(() => num.style.opacity = 0, 1500);
+  }, {threshold: [.3, .6]});
+  pages.forEach(d => seen.observe(d));
+  if (start > 1 && pages[start - 1]) pages[start - 1].scrollIntoView();
+}
+</script>
+</body>
+</html>

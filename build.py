@@ -1,4 +1,4 @@
-"""Сборка сайта: documents/ (PDF, DOCX, TXT) -> public/ (страница, PDF, DOCX и TXT - страницами для чтения, поисковый индекс).
+"""Сборка сайта: documents/ (PDF, DOCX, TXT) -> public/ (страница, документы для чтения на сайте, поисковый индекс).
 Сервера у сайта нет: поиск считается в браузере по индексу, собранному здесь.
 Запуск:  python build.py   ->  папка public/ (её и публикуют)."""
 import hashlib
@@ -325,6 +325,8 @@ def build():
             (OUT / f.name).write_text(f.read_text("utf-8").replace("__BUILD__", version), "utf-8")
         elif f.is_file() and not f.name.startswith("."):
             shutil.copyfile(f, OUT / f.name)
+        elif f.is_dir() and not f.name.startswith("."):   # pdfjs/ - просмотр PDF на сайте
+            shutil.copytree(f, OUT / f.name)
     for path, d in zip(files, docs):
         (OUT / "files" / d["file"]).parent.mkdir(parents=True, exist_ok=True)
         if path.suffix.lower() == ".pdf":    # PDF браузер показывает сам
