@@ -1,3 +1,4 @@
 pypdf
 python-docx
 pymupdf
+pymorphy3

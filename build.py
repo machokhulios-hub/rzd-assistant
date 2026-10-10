@@ -12,6 +12,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from urllib.parse import quote
 
+import style
+
 BASE = Path(__file__).parent
 SRC, WEB, OUT, CACHE = BASE / "documents", BASE / "web", BASE / "public", BASE / ".cache"
 EXTS = {".pdf", ".docx", ".txt", ".md"}
@@ -208,7 +210,8 @@ def make_view(path: Path, d: dict) -> bool:
     """Документ для чтения на сайте (reader.py): files/<файл>.html и картинки в files/<файл>.img/.
     Готовое хранится в .cache/view - пересобирается, только если поменялся файл или reader.py."""
     import reader
-    key = hashlib.sha1(path.read_bytes() + Path(reader.__file__).read_bytes()).hexdigest()
+    std = style.applies(path)       # правило единого стиля: орфография, типографика, текст по ширине
+    key = hashlib.sha1(path.read_bytes() + Path(reader.__file__).read_bytes() + (style.signature() if std else b"")).hexdigest()
     cache, dst = CACHE / "view" / key, OUT / "files" / (d["file"] + ".html")
     if not (cache / "body.html").exists():
         ext, img = path.suffix.lower(), cache / "img"
@@ -230,6 +233,8 @@ def make_view(path: Path, d: dict) -> bool:
         except Exception as e:
             print(f"  НЕ СОБРАН ДЛЯ ЧТЕНИЯ: {path.name}: {e}")
             body = ""
+        if std and body.strip():
+            body = style.page_body(body, path.name)
         cache.mkdir(parents=True, exist_ok=True)
         (cache / "body.html").write_text(body, "utf-8")
     body = (cache / "body.html").read_text("utf-8")
@@ -239,7 +244,7 @@ def make_view(path: Path, d: dict) -> bool:
         shutil.copytree(cache / "img", OUT / "files" / (d["file"] + ".img"))
     up = "../" * (d["file"].count("/") + 1)
     orig = f"{up}pdf.html?f={quote('files/' + d['file'], safe='')}" if path.suffix.lower() == ".pdf" else ""
-    dst.write_text(reader.page_html(d["name"], body, orig), "utf-8")
+    dst.write_text(reader.page_html(d["name"], body, orig, std), "utf-8")
     return True
 
 
@@ -273,8 +278,10 @@ def build():
             print(f"НЕ ПРОЧИТАН: {path.name}: {e}")
             parts = []
         start = len(chunks)
+        fix = style.Fixer() if style.applies(path) else None     # поиск - по исправленному тексту, как на странице
         for label, text in parts:
-            chunks += [(len(docs), label, piece) for piece in split_text(clean(text))]
+            text = clean(text)
+            chunks += [(len(docs), label, piece) for piece in split_text(fix(text) if fix else text)]
         docs.append({"name": re.sub(r"[_\s]+", " ", nfc(path.stem)).strip(), "file": nfc(path.relative_to(SRC).as_posix()),
                      "sec": "" if path.parent == SRC else nfc(path.parent.name), "parts": len(parts), "start": start, "chunks": len(chunks) - start})
         note = "" if len(chunks) > start else "  <- нет текста (скан?), поиск по файлу работать не будет"

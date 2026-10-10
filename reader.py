@@ -18,6 +18,8 @@ body{font:18px/1.5 "Times New Roman","Liberation Serif","PT Serif",Georgia,serif
 main{max-width:720px;margin:0 auto;padding:18px 16px 64px;overflow-wrap:break-word}
 p{margin:0 0 .45em;text-align:left;text-indent:1.5em;hyphens:auto;-webkit-hyphens:auto}
 @media (min-width:600px){p{text-align:justify}}
+.std p{text-align:justify}
+.std h2+h3{margin-top:1.3em}
 p.c{text-align:center;text-indent:0}
 p.r{text-align:left;text-indent:0;margin-left:45%}
 p.ed{font-size:.85em;color:#555;font-style:italic;text-indent:0;margin:.2em 0 .6em}
@@ -35,10 +37,12 @@ figure{margin:.8em 0;text-align:center}figure img{max-width:100%;height:auto}fig
 a[id]{display:block;position:relative;top:-50px;visibility:hidden}"""
 
 
-def page_html(title: str, body: str, original: str = "") -> str:
+def page_html(title: str, body: str, original: str = "", std: bool = False) -> str:
+    """std - документ единого стиля (style.py): текст по ширине и на узком экране."""
     link = f'<a href="{html.escape(original)}">Оригинал</a>' if original else ""
+    cls = ' class="std"' if std else ""
     return (f'<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            f'<title>{html.escape(title)}</title><style>{CSS}</style></head><body>'
+            f'<title>{html.escape(title)}</title><style>{CSS}</style></head><body{cls}>'
             f'<div class="bar"><span>{html.escape(title)}</span>{link}</div><main>\n{body}\n</main></body></html>')
 
 
