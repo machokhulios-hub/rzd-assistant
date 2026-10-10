@@ -562,7 +562,7 @@ html.big{zoom:1.15}
   <!-- Инструменты: калькулятор, часы, таймер -->
   <section class="view" id="v-tools">
     <h1 id="toolsH">Калькулятор</h1><p class="sub" id="toolsSub"></p>
-    <div class="seg"><button id="tl-calc" onclick="toolsMode('calc')">Калькулятор</button><button id="tl-clock" onclick="toolsMode('clock')">Часы</button><button id="tl-timer" onclick="toolsMode('timer')">Таймер</button></div>
+    <div class="seg" id="toolsSeg"><button id="tl-clock" onclick="toolsMode('clock')">Часы</button><button id="tl-timer" onclick="toolsMode('timer')">Таймер</button></div>
 
     <div id="t-calc">
       <div class="card kcd"><div class="e" id="kcE">0</div><div class="r" id="kcR"></div></div>
@@ -1185,7 +1185,8 @@ let TL = load('toolsMode', {m: 'calc'}).m;
 if (!TOOLS[TL]) TL = 'calc';
 function toolsMode(m) {
   if (TOOLS[m]) { TL = m; save('toolsMode', {m}); }
-  Object.keys(TOOLS).forEach(k => { $('tl-' + k).classList.toggle('on', k === TL); $('t-' + k).style.display = k === TL ? '' : 'none'; });
+  Object.keys(TOOLS).forEach(k => { if ($('tl-' + k)) $('tl-' + k).classList.toggle('on', k === TL); $('t-' + k).style.display = k === TL ? '' : 'none'; });
+  $('toolsSeg').style.display = TL === 'calc' ? 'none' : '';   // калькулятор открывается своей плиткой, без переключателя «Часы / Таймер»
   const [h, sub] = TL === 'timer' && SWT.on ? ['Секундомер', 'Время с точностью до сотых секунды и круги.'] : TOOLS[TL];
   $('toolsH').textContent = h; $('toolsSub').textContent = sub;
   if (TL === 'calc') kcRender();
