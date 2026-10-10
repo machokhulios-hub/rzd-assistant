@@ -175,6 +175,8 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .vrow input:focus{border-color:rgba(255,82,82,.6)}
 .vrow .r{text-align:right;font-weight:700}
 .vrow.tot{background:var(--card2)}
+.vrow.auto input{color:var(--green);border-style:dashed}
+.vrow small i{font-style:normal;color:var(--green);font-weight:700}
 .vmore{display:block;width:100%;padding:13px 16px;border-top:1px solid var(--line);font-weight:700;font-size:13px;color:var(--muted);text-align:center}
 .verd{margin-top:12px;font-size:13.5px;font-weight:600}
 .verd.ok{color:var(--green)}.verd.warn{color:var(--amber)}.verd.bad{color:var(--red)}
@@ -532,6 +534,7 @@ html.big{zoom:1.15}
         <label>Вес состава, тс<input class="inp" id="vuW" inputmode="decimal" placeholder="например, 5200" oninput="vuSet('w',this.value)"></label>
         <label>Всего осей<input class="inp" id="vuAx" inputmode="numeric" placeholder="например, 280" oninput="vuSet('ax',this.value)"></label>
       </div>
+      <label>Нажатие на ось у остальных вагонов<select class="inp" id="vuMain" onchange="vuSet('main',this.value,1)"></select></label>
       <button type="button" class="tog" onclick="vuSet('loco',!VU.loco,1)"><span class="sw" id="vuLocoSw"></span>Учитывать вес и тормоза локомотива</button>
       <label id="vuLwBox">Учётный вес локомотива, тс<input class="inp" id="vuLw" inputmode="decimal" placeholder="ЧС2 - 120, ЭП1, ЭП2К - 135, ТЭП70 - 136" oninput="vuSet('lw',this.value)"></label>
       <div class="pre" id="vuCatNote"></div>
@@ -554,7 +557,7 @@ html.big{zoom:1.15}
 
     <h2>В бланк</h2>
     <div class="card" id="vuBlank"></div>
-    <p class="note">Нормы - из «Норм обеспечения поездов тормозами» (приложение 2 к Правилам эксплуатации тормозов, текст с сайта Минтранса): единое наименьшее нажатие - таблица 1, допускаемое минимальное - таблица 2, нажатие на ось - таблицы 3 и 4, ручные тормоза - таблица 8. В грузовых поездах вес и тормоза локомотива не учитываются (п. 6.3). Требуемое нажатие округляю вверх до целой тонны. Сверяйте с действующей редакцией Правил и местными инструкциями вашей дороги.</p>
+    <p class="note">Нормы - из «Норм обеспечения поездов тормозами» (приложение 2 к Правилам эксплуатации тормозов, текст с сайта Минтранса): единое наименьшее нажатие - таблица 1, допускаемое минимальное - таблица 2, нажатие на ось - таблицы 3 и 4, ручные тормоза - таблица 8. В грузовых поездах вес и тормоза локомотива не учитываются (п. 6.3). Нажатие на ось сверено с таблицей III.3 и бланком ВУ-45 Правил эксплуатации тормозов № 151 (ред. от 01.01.2025). Требуемое нажатие округляю вверх до целой тонны. Сверяйте с действующей редакцией Правил и местными инструкциями вашей дороги.</p>
     </div>
   </section>
 
@@ -934,49 +937,59 @@ function crCalc() {
 
 // ---- справка ВУ-45
 // строки бланка и подсказки, кому какое нажатие на ось (таблицы 3 и 4 Норм)
-const VU_P = [1.25, 3, 3.5, 4.5, 5, 5.5, 6, 6.5, 7, 8, 8.5, 9, 10, 11, 11.5, 12, 12.5, 13, 14, 15, 16, 18, 19, 20, 21];
-const VU_HINT = {1.25: 'хоппер-дозатор ЦНИИ-2, ЦНИИ-3, чугун, порожний', 3: 'хоппер-дозатор ЦНИИ-ДВЗ, порожний', 3.5: 'грузовой вагон, порожний режим',
-  4.5: 'рефрижераторный, композит, порожний', 5: 'грузовой, чугун, средний режим', 5.5: 'ТЭМ7, порожний режим',
-  6: 'рефрижераторный, чугун, средний · изотермический, багажный', 6.5: 'остальные вагоны пассажирского парка',
-  7: 'грузовой: чугун гружёный · композит средний', 8: 'пассажирский, тара 42-48 тс', 8.5: 'грузовой, композит, гружёный режим',
-  9: 'пассажирский, тара 48-53 тс · рефрижераторный, чугун, гружёный', 10: 'пассажирский, тара 53 тс и более',
+const VU_P = [1.25, 2.5, 3, 3.5, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 11, 11.5, 12, 12.5, 13, 14, 15, 16, 18, 19, 21];
+const VU_HINT = {1.25: 'хоппер-дозатор ЦНИИ-2, ЦНИИ-3, чугун, порожний', 2.5: 'хоппер-дозатор ЦНИИ-ДВЗ, чугун, порожний',
+  3: 'порожний: хоппер-дозатор ЦНИИ-ДВЗ (композит), ЦНИИ-ДВЗМ (чугун) · думпкары 3ВС50, 4ВС50, 5ВС60',
+  3.5: 'грузовой вагон, порожний режим (чугун и композит) · хоппер-дозатор ЦНИИ-2, ЦНИИ-3, чугун, гружёный',
+  4.5: 'рефрижераторный, композит, порожний · думпкар, чугун, средний', 5: 'грузовой, чугун, средний режим', 5.5: 'ТЭМ7, порожний режим',
+  6: 'рефрижераторный, чугун, средний · изотермический, багажный · ЦНИИ-ДВЗ и думпкары 3ВС50-5ВС60, чугун, гружёный', 6.5: 'остальные вагоны пассажирского парка',
+  7: 'грузовой: композит средний · чугун гружёный · рефрижераторный, композит, средний', 8: 'пассажирский, тара 42-48 тс', 8.5: 'грузовой, композит, гружёный режим',
+  9: 'пассажирский, тара 48-53 тс или длиной до 20,2 м · рефрижераторный, чугун, гружёный', 9.5: 'контейнерная платформа 20,5 тс/ось, средний режим',
+  10: 'пассажирский, тара 53 тс и более · РИЦ с КЕ на пассажирском · дисковый ТВЗ до 120 км/ч',
   11: 'ВЛ60, ВЛ23, ЧМЭ3, ТЭМ2', 11.5: 'ТЭП10, ТЭ7', 12: '2ТЭ116, 2ТЭ10, 2М62 · ЧС на пассажирском режиме',
-  13: 'ЭП2К на пассажирском режиме · ТЭМ7', 14: 'ВЛ80, ВЛ10, ВЛ11, ВЛ85, 2ЭС5К, 3ЭС5К, 2ЭС6 · ЭП1, ТЭП70 на пассажирском',
+  12.5: 'контейнерная платформа 20,5 тс/ось, гружёный · дисковый ТВЗ до 140 км/ч',
+  13: 'ЭП2К на пассажирском режиме · ТЭМ7 · ВЛ-РИЦ, композит, скоростной · дисковый ТВЗ до 160 км/ч',
+  14: 'ВЛ80, ВЛ10, ВЛ11, ВЛ85, 2ЭС5К, 3ЭС5К, 2ЭС6 · ЭП1, ТЭП70 на пассажирском',
   15: 'вагон РИЦ с тормозом КЕ, чугун, скоростной режим', 16: 'ЧС2, ЧС4, ЧС7, ЧС8 на скоростном режиме · ЭП10',
   18: 'ЭП1, ЭП2К на скоростном режиме', 19: 'ТЭП70БС на скоростном режиме', 21: 'вагоны с дисковым тормозом и включённым МРТ'};
 // norm - таблица 1, min и v - таблица 2; k - км/ч за недостающую тонну (п. 4.4): 2 или [спуск до 0,006; круче]
 const VU_CAT = [
-  {id: 'gr', name: 'Грузовой гружёный, рефрижераторный, хозяйственный', norm: 33, min: 28, v: 80, k: 2, rows: [3.5, 5, 7, 8.5],
+  {id: 'gr', main: 7, name: 'Грузовой гружёный, рефрижераторный, хозяйственный', norm: 33, min: 28, v: 80, k: 2, rows: [3.5, 5, 7, 8.5],
    note: 'До 80 км/ч; до 90 км/ч - при зелёном огне АЛСН на трёхзначной автоблокировке и спуске не круче 0,010 (п. 3.1).'},
-  {id: 'p350', name: 'Грузовой порожний до 350 осей', norm: 55, min: 50, v: 100, k: 2, rows: [3.5], note: 'Скорость более 90 до 100 км/ч.'},
-  {id: 'p400', name: 'Грузовой порожний от 350 до 400 осей', norm: 44, k: 2, rows: [3.5]},
-  {id: 'p520', name: 'Грузовой порожний более 400 до 520 осей', norm: 33, k: 2, rows: [3.5]},
-  {id: 'ref100', name: 'Рефрижераторный, более 90 до 100 км/ч', norm: 55, min: 50, v: 100, k: [1, 2], rows: [4.5, 7]},
-  {id: 'ref120', name: 'Рефрижераторный, более 100 до 120 км/ч', norm: 60, min: 50, v: 120, k: [1, 2], rows: [4.5, 7],
+  {id: 'p350', main: 3.5, name: 'Грузовой порожний до 350 осей', norm: 55, min: 50, v: 100, k: 2, rows: [3.5], note: 'Скорость более 90 до 100 км/ч.'},
+  {id: 'p400', main: 3.5, name: 'Грузовой порожний от 350 до 400 осей', norm: 44, k: 2, rows: [3.5]},
+  {id: 'p520', main: 3.5, name: 'Грузовой порожний более 400 до 520 осей', norm: 33, k: 2, rows: [3.5]},
+  {id: 'ref100', main: 7, name: 'Рефрижераторный, более 90 до 100 км/ч', norm: 55, min: 50, v: 100, k: [1, 2], rows: [4.5, 7]},
+  {id: 'ref120', main: 7, name: 'Рефрижераторный, более 100 до 120 км/ч', norm: 60, min: 50, v: 120, k: [1, 2], rows: [4.5, 7],
    note: 'Вагоны по специальным техусловиям: композит на среднем режиме - 14 тс, на порожнем - 8,5 тс на ось.'},
-  {id: 'gp', name: 'Грузопассажирский, до 90 км/ч', norm: 44, min: 38, v: 90, k: [1, 2], loco: 1, rows: [3.5, 5, 7, 8.5, 9, 10, 14]},
-  {id: 'pas120', name: 'Пассажирский, до 120 км/ч', norm: 60, min: 45, v: 120, k: [1, 2], loco: 1, pas: 1, rows: [6.5, 8, 9, 10, 12, 14],
+  {id: 'gp', main: 7, name: 'Грузопассажирский, до 90 км/ч', norm: 44, min: 38, v: 90, k: [1, 2], loco: 1, rows: [3.5, 5, 7, 8.5, 9, 10, 14]},
+  {id: 'pas120', main: 10, name: 'Пассажирский, до 120 км/ч', norm: 60, min: 45, v: 120, k: [1, 2], loco: 1, pas: 1, rows: [6.5, 8, 9, 10, 12, 14],
    note: 'Если все тормоза включены и исправны, 60 тс на 100 тс принимают без подсчёта: таблицу не заполняют, в строке «Всего» пишут потребное нажатие (п. 6.4).'},
-  {id: 'pas130', name: 'Пассажирский, более 120 до 130 км/ч', norm: 68, min: 60, v: 130, k: [1, 2], loco: 1, pas: 1, rows: [8, 9, 10, 16, 18],
+  {id: 'pas130', main: 10, name: 'Пассажирский, более 120 до 130 км/ч', norm: 68, min: 60, v: 130, k: [1, 2], loco: 1, pas: 1, rows: [8, 9, 10, 16, 18],
    note: 'Электропневматический тормоз, композиционные колодки: нажатие вагонов на 25 % больше, чем для чугунных (п. 6.2).'},
-  {id: 'pas140', name: 'Пассажирский, более 130 до 140 км/ч', norm: 78, min: 68, v: 140, k: [1, 2], loco: 1, pas: 1, rows: [8, 9, 10, 16, 18],
+  {id: 'pas140', main: 10, name: 'Пассажирский, более 130 до 140 км/ч', norm: 78, min: 68, v: 140, k: [1, 2], loco: 1, pas: 1, rows: [8, 9, 10, 16, 18],
    note: 'Электропневматический тормоз, композиционные колодки: нажатие вагонов на 25 % больше, чем для чугунных (п. 6.2).'},
-  {id: 'pas160', name: 'Пассажирский, более 140 до 160 км/ч', norm: 80, min: 70, v: 160, k: [1, 2], loco: 1, pas: 1, rows: [8, 9, 10, 16, 18],
+  {id: 'pas160', main: 10, name: 'Пассажирский, более 140 до 160 км/ч', norm: 80, min: 70, v: 160, k: [1, 2], loco: 1, pas: 1, rows: [8, 9, 10, 16, 18],
    note: 'Электропневматический тормоз, композиционные колодки: нажатие вагонов на 30 % больше, чем для чугунных (п. 6.2).'}];
 // таблица 8: уклон, башмаков на 100 тс при нагрузке на ось от 10 тс, башмаков при меньшей нагрузке, ручных тормозных осей
+// вагонные нажатия (таблица III.3) - из них выбирают основное, куда уходит остаток осей
+const VU_WAGON = [1.25, 2.5, 3, 3.5, 4.5, 5, 6, 6.5, 7, 8, 8.5, 9, 9.5, 10, 12.5, 13, 15];
 const VU_HAND = [[0, .2, .4, .4], [.002, .2, .4, .4], [.004, .2, .4, .4], [.006, .2, .4, .4], [.008, .2, .6, .6], [.01, .3, .8, .8], [.012, .4, 1, 1],
   [.014, .4, 1.2, 1.2], [.016, .5, 1.4, 1.4], [.018, .6, 1.6, 1.6], [.02, .6, 1.8, 1.8], [.022, .7, 2, 0], [.024, .8, 2.2, 0], [.026, .8, 2.4, 0],
   [.028, .9, 2.6, 0], [.03, 1, 2.8, 0], [.032, 1, 3, 0], [.034, 1.1, 3.2, 0], [.036, 1.2, 3.4, 0], [.038, 1.2, 3.6, 0], [.04, 1.3, 3.8, 0]];
 let VU = {cat: 'gr', w: '', ax: '', loco: false, lw: '', n: {}, all: false, slope: 'u', hand: ''};
 try { VU = Object.assign(VU, JSON.parse(localStorage.getItem('vu45') || '{}')); } catch (e) {}
+if (VU.main === undefined) VU.main = String(vuCatOf(VU.cat).main);
 const num = v => { const x = parseFloat(String(v).replace(',', '.').replace(/\s/g, '')); return x > 0 ? x : 0; };
 const ru = (x, d = 1) => (Math.round(x * 100) / 100).toLocaleString('ru-RU', {maximumFractionDigits: d});
 const up = x => Math.ceil(x - 1e-9);
-const vuCat = () => VU_CAT.find(c => c.id === VU.cat) || VU_CAT[0];
+function vuCatOf(id) { return VU_CAT.find(c => c.id === id) || VU_CAT[0]; }
+const vuCat = () => vuCatOf(VU.cat);
+const vuMain = () => VU_P.includes(+VU.main) ? +VU.main : 0;  // 0 - остаток осей не подставлять
 
 function vuSet(key, value, redraw) {
   VU[key] = value;
-  if (key === 'cat') VU.loco = !!vuCat().loco;
+  if (key === 'cat') { VU.loco = !!vuCat().loco; VU.main = String(vuCat().main); }
   save('vu45', VU);
   redraw ? vuRender() : vuCalc();
 }
@@ -987,22 +1000,31 @@ function vuRender() {
   $('vuCat').innerHTML = VU_CAT.map(x => `<option value="${x.id}" ${x.id === c.id ? 'selected' : ''}>${x.name} - ${x.norm} тс</option>`).join('');
   $('vuSlope').innerHTML = `<option value="u">0,6 оси - единая норма (две и более дорог)</option>` +
     VU_HAND.map((h, i) => `<option value="${i}" ${String(i) === String(VU.slope) ? 'selected' : ''}>уклон ${h[0].toFixed(3).replace('.', ',')} - ${h[3] ? ru(h[3]) + ' оси' : 'только башмаки'}</option>`).join('');
+  const m = vuMain(), opt = p => `<option value="${p}" ${p === m ? 'selected' : ''}>${ru(p, 2)} - ${VU_HINT[p]}</option>`;
+  $('vuMain').innerHTML = `<option value="0" ${m ? '' : 'selected'}>не подставлять - внесу все оси вручную</option>` +
+    `<optgroup label="Для этой категории">${c.rows.filter(p => VU_WAGON.includes(p)).map(opt).join('')}</optgroup>` +
+    `<optgroup label="Другие вагоны">${VU_WAGON.filter(p => !c.rows.includes(p)).map(opt).join('')}</optgroup>`;
   $('vuW').value = VU.w; $('vuAx').value = VU.ax; $('vuLw').value = VU.lw; $('vuHand').value = VU.hand;
   $('vuLocoSw').classList.toggle('on', VU.loco); $('vuLwBox').style.display = VU.loco ? '' : 'none';
-  $('vuCatNote').textContent = (c.note || '') + (VU.loco ? ' Оси локомотива внесите в строку с его нажатием.' : '');
+  $('vuCatNote').textContent = (c.note || '') + (VU.loco ? ' Оси локомотива внесите в строку с его нажатием - они вычтутся из «Всего осей».' : '') +
+    (m ? ` Оси, не внесённые в другие строки, считаю с нажатием ${ru(m, 2)} тс на ось.` : '');
   $('vuHandBox').style.display = c.pas ? 'none' : '';
-  const rows = VU_P.filter(p => VU.all || c.rows.includes(p) || num(VU.n[p]) || (VU.loco && [12, 14, 16].includes(p)));
+  const rows = VU_P.filter(p => VU.all || p === m || c.rows.includes(p) || num(VU.n[p]) || (VU.loco && [12, 14, 16].includes(p)));
   $('vuRows').innerHTML = `<div class="vrow head"><span>Нажатие на ось</span><span style="text-align:center">Осей</span><span class="r">Нажатие, тс</span></div>` +
-    rows.map(p => `<div class="vrow"><span><b>${ru(p, 2)}</b><small>${VU_HINT[p] || ''}</small></span>
-      <input inputmode="numeric" value="${esc(VU.n[p] || '')}" placeholder="0" oninput="vuN(${p},this.value)" aria-label="Осей с нажатием ${ru(p, 2)} тс"><span class="r" id="vuR${p * 100}"></span></div>`).join('') +
+    rows.map(p => `<div class="vrow${p === m ? ' auto' : ''}"><span><b>${ru(p, 2)}</b><small>${p === m ? '<i>остаток осей, авто</i> · ' : ''}${VU_HINT[p] || ''}</small></span>
+      ${p === m ? `<input id="vuAuto" readonly tabindex="-1" placeholder="0" aria-label="Осей с нажатием ${ru(p, 2)} тс: всего осей минус оси в других строках">`
+        : `<input inputmode="numeric" value="${esc(VU.n[p] || '')}" placeholder="0" oninput="vuN(${p},this.value)" aria-label="Осей с нажатием ${ru(p, 2)} тс">`}<span class="r" id="vuR${p * 100}"></span></div>`).join('') +
     `<div class="vrow tot"><span><b>Всего</b></span><span class="r" style="text-align:center" id="vuTotAx"></span><span class="r" id="vuTot"></span></div>` +
     (VU.all ? '' : `<button class="vmore" onclick="vuSet('all',true,1)">Показать все строки бланка</button>`);
   vuCalc();
 }
 function vuCalc() {
   const c = vuCat(), w = num(VU.w), wAll = w + (VU.loco ? num(VU.lw) : 0);
+  const m = vuMain(), total = Math.floor(num(VU.ax)), manual = VU_P.reduce((a, p) => a + (p === m ? 0 : Math.floor(num(VU.n[p]))), 0);
+  const auto = m ? Math.max(0, total - manual) : 0;
+  if ($('vuAuto')) $('vuAuto').value = auto || '';
   let fact = 0, braked = 0;
-  VU_P.forEach(p => { const n = Math.floor(num(VU.n[p])), el = $('vuR' + p * 100); fact += n * p; braked += n; if (el) el.textContent = n ? ru(n * p, 2) : ''; });
+  VU_P.forEach(p => { const n = p === m ? auto : Math.floor(num(VU.n[p])), el = $('vuR' + p * 100); fact += n * p; braked += n; if (el) el.textContent = n ? ru(n * p, 2) : ''; });
   fact = Math.round(fact * 100) / 100;
   $('vuTotAx').textContent = braked || ''; $('vuTot').textContent = braked ? ru(fact, 2) : '';
   const need = wAll * c.norm / 100, per = wAll ? fact / wAll * 100 : 0, axles = Math.floor(num(VU.ax)) || braked;
