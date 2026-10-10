@@ -415,15 +415,32 @@ html.big{zoom:1.15}
     </div>
   </section>
 
-  <!-- Электроэнергия: счётчики секций из поездок в Учёте часов -->
+  <!-- Электроэнергия: показания счётчиков секций при приёмке и сдаче локомотива -->
   <section class="view" id="v-energy">
-    <h1>Электроэнергия</h1><p class="sub">Расход и рекуперация по счётчикам секций - из поездок в Учёте часов.</p>
+    <h1>Электроэнергия</h1><p class="sub">Показания счётчиков при приёмке и сдаче: посчитаю расход и рекуперацию по секциям и за месяц.</p>
     <div class="mon"><button onclick="enMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
       <b id="enName"></b><button onclick="enMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
     <div id="enSum"></div>
-    <button class="btn" style="margin-top:14px" id="enAdd" onclick="enWrite()">Записать показания</button>
-    <h2>Поездки со счётчиками</h2>
-    <div id="enTrips"></div>
+
+    <h2 id="enTitle">Записать показания</h2>
+    <form class="card form" onsubmit="event.preventDefault();enSave()">
+      <label>Приёмка<input type="datetime-local" id="enStart"></label>
+      <div class="two keep">
+        <label>Серия электровоза<select class="inp" id="enLoco" onchange="secSet(secOf(this.value))"><option value="">не выбрана</option><option>ВЛ10У</option><option>ВЛ15</option><option>2ЭС4К</option><option>3ЭС4К</option><option>2ЭС6</option></select></label>
+        <label>Номер поезда<input class="inp" id="enTrain" autocomplete="off" maxlength="12" inputmode="numeric" placeholder="например, 2345"></label>
+      </div>
+      <div class="pre" id="enFromTrip"></div>
+      <div class="seg" style="margin:0"><button type="button" id="sec-2" onclick="secSet(2)">2 секции</button><button type="button" id="sec-3" onclick="secSet(3)">3 секции</button></div>
+      <div id="enSecs" style="display:grid;gap:12px"></div>
+      <div class="pre">У каждой секции свои счётчики расхода и рекуперации, кВт·ч. Показания при сдаче можно дописать после поездки (кнопка ✎ в списке ниже).</div>
+      <div class="err" id="enErr"></div>
+      <button class="btn" id="enBtn">Записать показания</button>
+      <button type="button" class="linkbtn" id="enCancel" style="display:none" onclick="enEdit(0)">Отменить изменение</button>
+    </form>
+
+    <h2>Показания за месяц</h2>
+    <div id="enList"></div>
+    <button class="morebtn" id="enCsv" style="margin-top:10px;display:none" onclick="enExport()">Выгрузить месяц в таблицу</button>
   </section>
 
   <!-- Разделы, которые ещё не готовы: Телефоны, Тесты -->
@@ -473,7 +490,7 @@ html.big{zoom:1.15}
       </div>
       <div class="pre">Окончание можно не заполнять: запишите поездку перед выездом и допишите время после.</div>
       <div class="two keep">
-        <label>Серия электровоза<select class="inp" id="tLoco" onchange="secSet(secOf(this.value))"><option value="">не выбрана</option><option>ВЛ10У</option><option>ВЛ15</option><option>2ЭС4К</option><option>3ЭС4К</option><option>2ЭС6</option></select></label>
+        <label>Серия электровоза<select class="inp" id="tLoco"><option value="">не выбрана</option><option>ВЛ10У</option><option>ВЛ15</option><option>2ЭС4К</option><option>3ЭС4К</option><option>2ЭС6</option></select></label>
         <label>Номер поезда<input class="inp" id="tTrain" autocomplete="off" maxlength="12" inputmode="numeric" placeholder="например, 2345"></label>
       </div>
       <div class="two keep">
@@ -481,12 +498,6 @@ html.big{zoom:1.15}
         <label>Оси<input class="inp" id="tAx" oninput="preview()" autocomplete="off" maxlength="5" inputmode="numeric" placeholder="например, 280"></label>
       </div>
       <div class="pre" id="sFromVu"></div>
-      <button type="button" class="tog" onclick="toggleEn()"><span class="sw" id="enSw"></span>Счётчики электроэнергии</button>
-      <div id="enBox" style="display:none;gap:12px">
-        <div class="seg" style="margin:0"><button type="button" id="sec-2" onclick="secSet(2)">2 секции</button><button type="button" id="sec-3" onclick="secSet(3)">3 секции</button></div>
-        <div id="enSecs" style="display:grid;gap:12px"></div>
-        <div class="pre">У каждой секции свои счётчики расхода и рекуперации, кВт·ч. Показания при сдаче можно дописать после поездки. Расход и рекуперацию посчитаю как разницу показаний и сложу по секциям.</div>
-      </div>
       <button type="button" class="tog" onclick="toggleRest()"><span class="sw" id="restSw"></span>Был отдых в пункте оборота</button>
       <div id="restBox" style="display:none;gap:12px">
         <div class="two">
@@ -797,7 +808,7 @@ const ic = n => `<svg><use href="#i-${n}"/></svg>`;
 
 let TG = null;   // Telegram.WebApp, когда страница открыта как Mini App в Telegram
 
-const NAV = {energy: 'hours', quiz: 'home', dates: 'more', train: 'home', tools: 'home', vac: 'more', soon: 'home'};   // страницы без своей кнопки в нижнем меню
+const NAV = {energy: 'home', quiz: 'home', dates: 'more', train: 'home', tools: 'home', vac: 'more', soon: 'home'};   // страницы без своей кнопки в нижнем меню
 let VIEW = 'home', BACK = [];   // BACK - пройденные разделы для кнопки «Назад» в Telegram
 function go(view, arg, back) {
   if (view === 'home') { BACK = []; homeNow(); }
@@ -856,16 +867,11 @@ function renderHours(r) {
     (r.last ? `<div class="card next"><span class="badge" style="--c:var(--green)">${ic('clock')}</span><span><small>Следующая явка не раньше</small>
       <b>${dt(r.last.next)}</b><small>отдых дома ${hm(r.last.home)} после поездки ${dt(r.last.start)}</small></span></div>` : '');
   prodCal(r.ym);
-  const en = monthEnergy(r.ym);
-  if (en) $('hoursSum').insertAdjacentHTML('beforeend', `<div class="card next"><span class="badge" style="--c:var(--amber)">${ic('sun')}</span><span><small>Электроэнергия за месяц</small>
-    <b>${kwh(en.use)}</b><small>${en.rec ? `рекуперация ${kwh(en.rec)}` + (en.use ? ` · ${ru(en.rec / en.use * 100)} % от расхода` : '') : 'рекуперация не записана'} · поездок со счётчиками: ${en.n}</small></span></div>`);
   $('csvBtn').style.display = r.items.length || r.open.length ? '' : 'none';
   // данные поезда: номер, электровоз, вес, оси; из веса и осей - сразу в расчёты
   const info = x => {
     const t = [x.train && `поезд № ${esc(x.train)}`, esc(x.loco), x.weight && `${esc(x.weight)} тс`, x.axles && `${esc(x.axles)} ${plural(int(x.axles), 'ось', 'оси', 'осей')}`].filter(Boolean).join(' · ');
-    const e = energy(x), ns = meters(x).length, et = e && [e.use !== null && `расход ${kwh(e.use)}`, e.rec !== null && `рекуперация ${kwh(e.rec)}` + (e.use ? ` (${ru(e.rec / e.use * 100)} %)` : ''),
-      ns > 1 && `${ns} ${plural(ns, 'секция', 'секции', 'секций')}`].filter(Boolean).join(' · ');
-    return (t ? `<small class="info">${t}</small>` : '') + (et ? `<small>${et}</small>` : '') + (num(x.weight) ? `<small><button class="linkbtn" onclick="tripTo(${x.id},'vu')">Справка ВУ-45</button> · <button class="linkbtn" onclick="tripTo(${x.id},'shoe')">Башмаки</button></small>` : '');
+    return (t ? `<small class="info">${t}</small>` : '') + (num(x.weight) ? `<small><button class="linkbtn" onclick="tripTo(${x.id},'vu')">Справка ВУ-45</button> · <button class="linkbtn" onclick="tripTo(${x.id},'shoe')">Башмаки</button></small>` : '');
   };
   const acts = x => `<span class="acts"><button class="x" onclick="editShift(${x.id})" aria-label="Изменить поездку">✎</button><button class="x" onclick="delShift(${x.id})" aria-label="Удалить поездку">✕</button></span>`;
   $('trips').innerHTML = r.items.length || r.open.length ? `<div class="card">` + r.open.map(x =>
@@ -911,14 +917,13 @@ let EDIT = 0;   // номер поездки, которую сейчас изм
 function addShift() {
   const val = id => $(id).value.slice(0, 16), txt = id => $(id).value.trim();
   const x = {start: val('sStart'), end: val('sEnd'), rest_start: restOn ? val('rStart') : '', rest_end: restOn ? val('rEnd') : '',
-    loco: txt('tLoco'), train: txt('tTrain'), weight: txt('tW'), axles: txt('tAx'), sec: ENSEC, en: enForm()};
+    loco: txt('tLoco'), train: txt('tTrain'), weight: txt('tW'), axles: txt('tAx')};
   if (!x.start) { $('sErr').textContent = 'Укажите дату и время явки.'; return; }
   if (restOn && !(x.end && x.rest_start && x.rest_end)) { $('sErr').textContent = 'Отдых в пункте оборота записывается вместе с окончанием работы: заполните все три времени.'; return; }
-  const err = tripError(x, EDIT) || meterError(x);
+  const err = tripError(x, EDIT);
   if (err) { $('sErr').textContent = err; return; }
-  if (!x.en.some(m => m.e1 || m.e2 || m.r1 || m.r2)) { delete x.sec; delete x.en; }
   const old = HRS.shifts.find(t => t.id === EDIT);
-  if (old) { ['e1', 'e2', 'r1', 'r2', 'sec', 'en'].forEach(k => delete old[k]); Object.assign(old, x); } else HRS.shifts.push(Object.assign(x, {id: ++HRS.seq}));
+  if (old) Object.assign(old, x); else HRS.shifts.push(Object.assign(x, {id: ++HRS.seq}));
   save('hours', HRS);
   editShift(0);
   YM = x.start.slice(0, 7); loadHours();
@@ -929,10 +934,6 @@ function editShift(id) {   // поездка переносится в форм�
   // серия, записанная раньше и не входящая в список, при изменении поездки не теряется
   if (x && x.loco && ![...$('tLoco').options].some(o => o.value === x.loco)) $('tLoco').add(new Option(x.loco, x.loco));
   set('sStart', x && x.start); set('sEnd', x && x.end); set('tLoco', x && x.loco); set('tTrain', x && x.train); set('tW', x && x.weight); set('tAx', x && x.axles);
-  const ms = x ? meters(x) : [];
-  secSet(x && x.sec || Math.max(ms.length, secOf(x && x.loco)));
-  [1, 2, 3].forEach(n => ['e1', 'e2', 'r1', 'r2'].forEach(k => set(`t${k}_${n}`, ms[n - 1] && ms[n - 1][k])));
-  toggleEn(ms.some(m => m.e1 || m.e2 || m.r1 || m.r2));
   if (restOn !== !!(x && x.rest_start)) toggleRest();
   set('rStart', x && x.rest_start); set('rEnd', x && x.rest_end);
   $('tripTitle').textContent = x ? 'Изменить поездку' : 'Добавить поездку';
@@ -941,10 +942,19 @@ function editShift(id) {   // поездка переносится в форм�
   preview();
   if (x) $('tripTitle').scrollIntoView({block: 'start'});
 }
-// ---- счётчики электроэнергии: в каждой секции свои счётчики расхода и рекуперации;
+// ---- электроэнергия: в каждой секции свои счётчики расхода и рекуперации;
 // расход и рекуперация - разница показаний при сдаче и приёмке, сложенная по секциям
-let enOn = false, ENSEC = 2;
-function toggleEn(on) { enOn = on === undefined ? !enOn : on; $('enSw').classList.toggle('on', enOn); $('enBox').style.display = enOn ? 'grid' : 'none'; }
+let ENSEC = 2, ENEDIT = 0;   // ENEDIT - номер записи, которую сейчас изменяют в форме
+function enMove() {   // показания, записанные раньше в поездках Учёта часов, переезжают сюда
+  const old = x => x.en || x.e1 || x.e2 || x.r1 || x.r2;
+  if (!HRS.shifts.some(old)) return;
+  HRS.shifts.filter(old).forEach(x => {
+    const en = x.en || [{e1: x.e1 || '', e2: x.e2 || '', r1: x.r1 || '', r2: x.r2 || ''}];
+    if (!EN.items.some(y => y.start === x.start)) EN.items.push({id: ++EN.seq, start: x.start, loco: x.loco || '', train: x.train || '', en});
+    ['e1', 'e2', 'r1', 'r2', 'sec', 'en'].forEach(k => delete x[k]);
+  });
+  save('energy', EN); save('hours', HRS);
+}
 const secOf = loco => /^3/.test(loco || '') ? 3 : 2;   // 3ЭС4К - три секции, остальные серии в списке - две
 function secSet(n) {
   ENSEC = n;
@@ -956,81 +966,128 @@ function enInit() {
   $('enSecs').innerHTML = [1, 2, 3].map(n => `<div class="secbox" style="display:grid;gap:12px"><div class="sech">Секция ${n}</div>
     <div class="two keep">${inp('e1', n, 'Расход при приёмке')}${inp('e2', n, 'Расход при сдаче')}</div>
     <div class="two keep">${inp('r1', n, 'Рекуперация при приёмке')}${inp('r2', n, 'Рекуперация при сдаче')}</div></div>`).join('');
-  secSet(ENSEC);
+  enEdit(0);
 }
 const enForm = () => [1, 2, 3].slice(0, ENSEC).map(n => { const m = {}; ['e1', 'e2', 'r1', 'r2'].forEach(k => m[k] = $(`t${k}_${n}`).value.trim()); return m; });
-const meters = x => x.en || (x.e1 || x.e2 || x.r1 || x.r2 ? [{e1: x.e1, e2: x.e2, r1: x.r1, r2: x.r2}] : []);   // поездки, записанные до счётчиков по секциям, - одна секция
 const meter = v => { const x = parseFloat(String(v || '').replace(',', '.').replace(/\s/g, '')); return isFinite(x) ? x : null; };
 const diff = (a, b) => meter(a) !== null && meter(b) !== null ? Math.round((meter(b) - meter(a)) * 100) / 100 : null;
 const kwh = x => `${ru(x)} кВт·ч`;
+const pct = (rec, use) => ru(Math.round(rec / use * 1000) / 10) + ' %';
 function energy(x) {   // null - ни в одной секции нет пары показаний
   const add = (s, v) => v === null ? s : Math.round(((s || 0) + v) * 100) / 100;
   let use = null, rec = null;
-  meters(x).forEach(m => { use = add(use, diff(m.e1, m.e2)); rec = add(rec, diff(m.r1, m.r2)); });
+  x.en.forEach(m => { use = add(use, diff(m.e1, m.e2)); rec = add(rec, diff(m.r1, m.r2)); });
   return use === null && rec === null ? null : {use, rec};
 }
+const enWait = x => x.en.some(m => m.e1 && !m.e2 || m.r1 && !m.r2);   // ждёт показаний при сдаче
 function meterError(x) {
-  for (const [i, m] of meters(x).entries()) {
-    const s = meters(x).length > 1 ? ` (секция ${i + 1})` : '';
+  if (!x.en.some(m => m.e1 || m.e2 || m.r1 || m.r2)) return 'Впишите показания счётчиков.';
+  for (const [i, m] of x.en.entries()) {
+    const s = ` (секция ${i + 1})`;
     if ([m.e1, m.e2, m.r1, m.r2].some(v => v && meter(v) === null)) return 'Показания счётчиков вводятся числом' + s + '.';
     if (diff(m.e1, m.e2) < 0) return 'Показание расхода при сдаче меньше, чем при приёмке' + s + '.';
     if (diff(m.r1, m.r2) < 0) return 'Показание рекуперации при сдаче меньше, чем при приёмке' + s + '.';
   }
   return '';
 }
-function monthEnergy(ym) {   // поездка целиком относится к месяцу явки
+function monthEnergy(ym) {   // запись относится к месяцу приёмки
   let use = 0, rec = 0, n = 0;
-  HRS.shifts.forEach(x => { const e = x.start.slice(0, 7) === ym && energy(x); if (e) { use += e.use || 0; rec += e.rec || 0; n++; } });
-  return n ? {use, rec, n} : null;
+  EN.items.forEach(x => { const e = x.start.slice(0, 7) === ym && energy(x); if (e) { use += e.use || 0; rec += e.rec || 0; n++; } });
+  return n ? {use: Math.round(use * 100) / 100, rec: Math.round(rec * 100) / 100, n} : null;
 }
-// ---- раздел «Электроэнергия»: итог месяца и поездки с показаниями по секциям; месяц - общий с Учётом часов
+// месяц - общий с Учётом часов
 function enMonth(k) { shiftMonth(k); enRender(); }
 function enRender() {
   const en = monthEnergy(YM), [y, m] = YM.split('-');
   $('enName').textContent = `${MONTHS[+m - 1]} ${y}`;
   $('enSum').innerHTML = en ? `<div class="card sum"><div class="big">${kwh(en.use)} <small>расход</small></div>
-    <div class="stats"><div><small>Рекуперация</small><b>${kwh(en.rec)}</b></div><div><small>От расхода</small><b>${en.use ? ru(Math.round(en.rec / en.use * 1000) / 10) + ' %' : '-'}</b></div>
+    <div class="stats"><div><small>Рекуперация</small><b>${kwh(en.rec)}</b></div><div><small>От расхода</small><b>${en.use ? pct(en.rec, en.use) : '-'}</b></div>
       <div><small>Поездок</small><b>${en.n}</b></div></div>
     <div class="normf">В среднем за поездку: расход ${kwh(Math.round(en.use / en.n))}, рекуперация ${kwh(Math.round(en.rec / en.n))}</div></div>`
-    : `<div class="card empty">В этом месяце показаний счётчиков пока нет.</div>`;
-  const open = enOpen();
-  $('enAdd').textContent = open && meters(open).length ? 'Дописать показания при сдаче' : 'Записать показания';
-  const list = HRS.shifts.filter(x => x.start.slice(0, 7) === YM && meters(x).length).sort((p, q) => p.start < q.start ? 1 : -1);
-  const pair = (a, b) => diff(a, b) !== null ? `${ru(diff(a, b))}` : b ? '-' : a ? `${esc(a)} → …` : '-';
-  $('enTrips').innerHTML = list.length ? `<div class="card">` + list.map(x => {
-    const e = energy(x) || {}, ms = meters(x);
-    return `<div class="trip"><div><div class="when">${dt(x.start)}${x.end ? ' → ' + dt(x.end) : ' → …'}</div>
+    : `<div class="card empty">В этом месяце показаний пока нет.</div>`;
+  const list = EN.items.filter(x => x.start.slice(0, 7) === YM).sort((p, q) => p.start < q.start ? 1 : -1);
+  const pair = (a, b) => diff(a, b) !== null ? ru(diff(a, b)) : a && !b ? `${esc(a)} → …` : '-';
+  $('enList').innerHTML = list.length ? `<div class="card">` + list.map(x => {
+    const e = energy(x) || {}, n = x.en.length;
+    return `<div class="trip"><div><div class="when">приёмка ${dt(x.start)}</div>
       <b>${e.use != null ? kwh(e.use) : 'нет показаний при сдаче'}</b>
-      <small class="info">${[x.train && `поезд № ${esc(x.train)}`, esc(x.loco), `${ms.length} ${plural(ms.length, 'секция', 'секции', 'секций')}`].filter(Boolean).join(' · ')}</small>
-      ${e.rec != null ? `<small>рекуперация ${kwh(e.rec)}${e.use ? ` (${ru(Math.round(e.rec / e.use * 1000) / 10)} %)` : ''}</small>` : ''}
-      ${ms.length > 1 ? ms.map((s, i) => `<small>секция ${i + 1}: расход ${pair(s.e1, s.e2)} · рекуперация ${pair(s.r1, s.r2)}</small>`).join('') : ''}</div>
-      <span class="acts"><button class="x" onclick="enEdit(${x.id})" aria-label="Изменить показания">✎</button></span></div>`;
-  }).join('') + `</div>` : `<div class="card empty">Показания записываются в поездке: Учёт часов → «Счётчики электроэнергии».</div>`;
+      <small class="info">${[x.train && `поезд № ${esc(x.train)}`, esc(x.loco), `${n} ${plural(n, 'секция', 'секции', 'секций')}`].filter(Boolean).join(' · ')}</small>
+      ${e.rec != null ? `<small>рекуперация ${kwh(e.rec)}${e.use ? ` (${pct(e.rec, e.use)})` : ''}</small>` : ''}
+      ${n > 1 ? x.en.map((s, i) => `<small>секция ${i + 1}: расход ${pair(s.e1, s.e2)} · рекуперация ${pair(s.r1, s.r2)}</small>`).join('') : ''}
+      ${enWait(x) ? `<small class="w">Допишите показания при сдаче (кнопка ✎).</small>` : ''}</div>
+      <span class="acts"><button class="x" onclick="enEdit(${x.id})" aria-label="Изменить показания">✎</button><button class="x" onclick="enDel(${x.id})" aria-label="Удалить показания">✕</button></span></div>`;
+  }).join('') + `</div>` : `<div class="card empty">Записей за этот месяц нет.</div>`;
+  $('enCsv').style.display = list.length ? '' : 'none';
+  enTrip();
 }
-function enEdit(id) { go('hours'); editShift(id); toggleEn(true); $('enSw').scrollIntoView({block: 'start'}); }
-// последняя поездка, куда показания ещё дописывают: не завершена или нет показаний при сдаче
-const enOpen = () => HRS.shifts.filter(x => !x.end || meters(x).some(s => s.e1 && !s.e2 || s.r1 && !s.r2)).sort((p, q) => p.start < q.start ? 1 : -1)[0];
-function enWrite() {
-  const open = enOpen();
-  if (open) return enEdit(open.id);
-  go('hours'); editShift(0); toggleEn(true); $('tripTitle').scrollIntoView({block: 'start'});
+// незавершённая поездка из Учёта часов: приёмка, серия и номер поезда - одной кнопкой
+function enTrip() {
+  const t = !ENEDIT && crOpen();
+  $('enFromTrip').innerHTML = t && t.start !== $('enStart').value.slice(0, 16) ? `<button type="button" class="linkbtn" onclick="enFill()">Взять из Учёта часов: явка ${dt(t.start)}${t.loco ? ', ' + esc(t.loco) : ''}${t.train ? ', поезд № ' + esc(t.train) : ''}</button>` : '';
+}
+function enFill() {
+  const t = crOpen();
+  if (!t) return;
+  $('enStart').value = t.start; $('enTrain').value = t.train || '';
+  if (t.loco && [...$('enLoco').options].some(o => o.value === t.loco)) { $('enLoco').value = t.loco; secSet(secOf(t.loco)); }
+  enTrip();
+}
+function enEdit(id) {   // запись переносится в форму; 0 - очистить форму
+  const x = EN.items.find(t => t.id === id), set = (el, v) => $(el).value = v || '';
+  ENEDIT = x ? id : 0;
+  if (x && x.loco && ![...$('enLoco').options].some(o => o.value === x.loco)) $('enLoco').add(new Option(x.loco, x.loco));
+  set('enStart', x ? x.start : new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+  set('enLoco', x && x.loco); set('enTrain', x && x.train);
+  secSet(x ? x.en.length : 2);
+  [1, 2, 3].forEach(n => ['e1', 'e2', 'r1', 'r2'].forEach(k => set(`t${k}_${n}`, x && x.en[n - 1] && x.en[n - 1][k])));
+  $('enTitle').textContent = x ? 'Изменить показания' : 'Записать показания';
+  $('enBtn').textContent = x ? 'Сохранить изменения' : 'Записать показания';
+  $('enCancel').style.display = x ? '' : 'none';
+  $('enErr').textContent = '';
+  enTrip();
+  if (x) $('enTitle').scrollIntoView({block: 'start'});
+}
+function enSave() {
+  const x = {start: $('enStart').value.slice(0, 16), loco: $('enLoco').value.trim(), train: $('enTrain').value.trim(), en: enForm()};
+  if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d$/.test(x.start)) { $('enErr').textContent = 'Укажите дату и время приёмки.'; return; }
+  const err = meterError(x);
+  if (err) { $('enErr').textContent = err; return; }
+  const old = EN.items.find(t => t.id === ENEDIT);
+  if (old) Object.assign(old, x); else EN.items.push(Object.assign(x, {id: ++EN.seq}));
+  save('energy', EN);
+  enEdit(0);
+  YM = x.start.slice(0, 7); loadHours(); enRender();
+}
+function enDel(id) {
+  ask('Удалить показания?', () => {
+    if (ENEDIT === id) enEdit(0);
+    EN.items = EN.items.filter(x => x.id !== id); save('energy', EN); enRender();
+  });
+}
+function enExport() {
+  const when = v => `${dmy(v.slice(0, 10))} ${v.slice(11, 16)}`, val = v => v === null || v === undefined ? '' : String(v).replace('.', ',');
+  const head = ['Приёмка', 'Поезд', 'Серия электровоза', 'Секций', 'Расход, кВт·ч', 'Рекуперация, кВт·ч']
+    .concat(...[1, 2, 3].map(n => ['расход при приёмке', 'расход при сдаче', 'рекуперация при приёмке', 'рекуперация при сдаче'].map(t => `Секция ${n}: ${t}`)));
+  const rows = EN.items.filter(x => x.start.slice(0, 7) === YM).sort((a, b) => a.start < b.start ? -1 : 1).map(x => { const e = energy(x) || {};
+    return [when(x.start), x.train, x.loco, x.en.length, val(e.use), val(e.rec)].concat(...[0, 1, 2].map(i => ['e1', 'e2', 'r1', 'r2'].map(k => x.en[i] ? x.en[i][k] : ''))); });
+  csvSave(head, rows, `электроэнергия-${YM}.csv`);
 }
 
 // ---- выгрузка поездок месяца в таблицу (CSV для Excel: разделитель - точка с запятой, дробная часть - через запятую)
 function exportTrips() {
   const r = hoursData(YM), when = v => v ? `${dmy(v.slice(0, 10))} ${v.slice(11, 16)}` : '', h = m => m === undefined ? '' : (Math.round(m / 60 * 100) / 100).toString().replace('.', ',');
-  const val = v => v === null || v === undefined ? '' : String(v).replace('.', ','), cell = v => /[";\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
-  const head = ['Явка', 'Окончание работы', 'Рабочее время, ч', 'Ночные, ч', 'Отдых в обороте, ч', 'Отдых дома не меньше, ч', 'Поезд', 'Серия электровоза', 'Вес, тс', 'Оси',
-    'Секций', 'Расход, кВт·ч', 'Рекуперация, кВт·ч'].concat(...[1, 2, 3].map(n => ['расход при приёмке', 'расход при сдаче', 'рекуперация при приёмке', 'рекуперация при сдаче'].map(t => `Секция ${n}: ${t}`)));
-  const rows = r.open.filter(x => x.start.slice(0, 7) === YM).concat(r.items).sort((a, b) => a.start < b.start ? -1 : 1).map(x => { const e = energy(x) || {};
-    const ms = meters(x);
-    return [when(x.start), when(x.end), h(x.work), h(x.night), h(x.rest), h(x.home), x.train, x.loco, x.weight, x.axles, ms.length || '', val(e.use), val(e.rec)]
-      .concat(...[0, 1, 2].map(i => ['e1', 'e2', 'r1', 'r2'].map(k => ms[i] ? ms[i][k] : ''))); });
+  const head = ['Явка', 'Окончание работы', 'Рабочее время, ч', 'Ночные, ч', 'Отдых в обороте, ч', 'Отдых дома не меньше, ч', 'Поезд', 'Серия электровоза', 'Вес, тс', 'Оси'];
+  const rows = r.open.filter(x => x.start.slice(0, 7) === YM).concat(r.items).sort((a, b) => a.start < b.start ? -1 : 1).map(x =>
+    [when(x.start), when(x.end), h(x.work), h(x.night), h(x.rest), h(x.home), x.train, x.loco, x.weight, x.axles]);
+  csvSave(head, rows, `поездки-${YM}.csv`);
+}
+function csvSave(head, rows, name) {
+  const cell = v => /[";\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
   const text = '﻿' + [head, ...rows].map(row => row.map(v => cell(String(v || ''))).join(';')).join('\r\n');
-  if (TG && /^(ios|android)$/.test(TG.platform)) return tgShareCsv(text, `поездки-${YM}.csv`, [head, ...rows]);   // в Telegram на телефоне скачать файл нельзя
+  if (TG && /^(ios|android)$/.test(TG.platform)) return tgShareCsv(text, name, [head, ...rows]);   // в Telegram на телефоне скачать файл нельзя
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], {type: 'text/csv;charset=utf-8'}));
-  a.download = `поездки-${YM}.csv`;
+  a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
@@ -1056,7 +1113,7 @@ const CALC_SUB = {rest: 'Сколько отдыхать в пункте обо�
 const load = (key, def) => { try { return Object.assign(def, JSON.parse(localStorage.getItem(key) || '{}')); } catch (e) { return def; } };
 const save = (key, v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} cloudPush(key); };
 // в Telegram эти данные копируются в облако Telegram (CloudStorage) и видны на всех устройствах пользователя
-const SYNC = ['hours', 'pay', 'deadlines', 'vacation', 'bookmarks', 'quiz', 'trains', 'calcRest', 'calcShoe', 'vu45'];
+const SYNC = ['hours', 'energy', 'pay', 'deadlines', 'vacation', 'bookmarks', 'quiz', 'trains', 'calcRest', 'calcShoe', 'vu45'];
 const SYNCT = load('syncT', {}), CLOUD = {}, PUSH = {};   // SYNCT - когда данные менялись на этом устройстве, CLOUD - что лежит в облаке
 const clock = v => /^\d\d:\d\d/.test(v || '') ? +v.slice(0, 2) * 60 + +v.slice(3, 5) : null;
 const hhmm = m => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${p2(Math.floor(m / 60))}:${p2(m % 60)}`; };
@@ -1281,6 +1338,7 @@ function monthCal(ym) {
   return {days, hours, short, off: n - days, exact: !!CAL[y]};
 }
 const HRS = load('hours', {shifts: [], norms: {}, seq: 0});
+const EN = load('energy', {items: [], seq: 0});   // показания счётчиков электроэнергии
 // время считаем в минутах, как введено (местное/московское), без часовых поясов
 const tm = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10), +s.slice(11, 13), +s.slice(14, 16)) / 60000;
 const clip = (a, b, lo, hi) => Math.max(0, Math.min(b, hi) - Math.max(a, lo));
@@ -2280,6 +2338,7 @@ const CALC_TOPIC = [
   [/башмак|закреплен|уклон/, ['calc', 'shoe'], 'Башмаки', 'сколько тормозных башмаков для закрепления'],
   [/ву-?45|нажати|колодк|тормозн\S* ос|ручн\S* тормоз/, ['calc', 'vu'], 'Справка ВУ-45', 'требуемое и фактическое нажатие колодок'],
   [/бригадник|пункт\S* оборот|отдых/, ['calc', 'rest'], 'Бригадник', 'отдых в пункте оборота и время явки'],
+  [/электроэнерг|рекуперац|сч[её]тчик/, ['energy'], 'Электроэнергия', 'расход и рекуперация по счётчикам секций'],
   [/рабоч\S* врем|переработ|сверхуроч|ночн\S* (врем|час)|непрерывн\S* работ/, ['hours'], 'Учёт часов', 'поездки, часы за месяц, отдых дома'],
   [/отпуск/, ['vac'], 'Отпуск', 'дни отпуска, праздники и дата выхода'],
   [/медкомисс|медицинск\S* (осмотр|комисс)|аттестац|проверк\S* знани|охран\S* труда|электробезопасн/, ['dates'], 'Сроки', 'когда истекает и когда проходить снова'],
@@ -2547,6 +2606,7 @@ function moveMerge(k, a, b) {   // a - что уже есть здесь, b - и
   const add = (list, more, key, seq) => { const have = new Set(list.map(key)); return list.concat(more.filter(x => !have.has(key(x))).map(x => Object.assign({}, x, {id: ++seq.n}))); };
   const seq = {n: Math.max(a.seq || 0, ...(a.shifts || a.items || []).map(x => +x.id || 0))};
   if (k === 'hours') return Object.assign({}, b, a, {norms: Object.assign({}, b.norms, a.norms), shifts: add(a.shifts, b.shifts, x => x.start, seq), seq: seq.n});
+  if (k === 'energy') return Object.assign({}, b, a, {items: add(a.items, b.items, x => x.start, seq), seq: seq.n});
   if (k === 'deadlines') return Object.assign({}, b, a, {items: add(a.items, b.items, x => x.name + '|' + x.date, seq), seq: seq.n});
   if (k === 'bookmarks') return Object.assign({}, b, a, {items: uniq(a.items.concat(b.items), x => x.k)});
   if (k === 'quiz') return Object.assign({}, b, a, {done: Object.assign({}, b.done, a.done)});
@@ -2557,9 +2617,9 @@ async function moveImport(code) {
   let d;
   try { d = await moveRead(code); } catch (e) { return moveSay(code.trim() ? 'Код не подходит: скопируйте его целиком ещё раз.' : 'Вставьте код с другого устройства.'); }
   const n = (k, f) => { try { return f(d[k]) || 0; } catch (e) { return 0; } };
-  const what = [[n('hours', x => x.shifts.length), 'поездку', 'поездки', 'поездок'], [n('deadlines', x => x.items.length), 'срок', 'срока', 'сроков'],
+  const what = [[n('hours', x => x.shifts.length), 'поездку', 'поездки', 'поездок'], [n('energy', x => x.items.length), 'показания счётчиков', 'показания счётчиков', 'показаний счётчиков'], [n('deadlines', x => x.items.length), 'срок', 'срока', 'сроков'],
     [n('bookmarks', x => x.items.length), 'закладку', 'закладки', 'закладок']].filter(c => c[0]).map(([c, ...w]) => `${c} ${plural(c, ...w)}`).join(', ');
-  ask(`Перенести ${what || 'данные'}? Поездки, сроки и закладки добавятся к тем, что уже есть здесь, а отпуск и расчёты заменятся.`, async () => {
+  ask(`Перенести ${what || 'данные'}? Поездки, показания счётчиков, сроки и закладки добавятся к тем, что уже есть здесь, а отпуск и расчёты заменятся.`, async () => {
     moveSay('Переношу…');
     for (const k of SYNC) {
       if (!d[k] || typeof d[k] !== 'object') continue;
@@ -2604,7 +2664,7 @@ async function accLogout() {
   const FOLD = load('folds', {marks: true});
   document.querySelectorAll('details.fold').forEach(d => { d.open = !!FOLD[d.dataset.fold]; d.addEventListener('toggle', () => { FOLD[d.dataset.fold] = d.open; save('folds', FOLD); }); });
   try { if (sessionStorage.getItem('moved')) { sessionStorage.removeItem('moved'); go('more'); moveSay('Данные перенесены.'); } } catch (e) {}
-  enInit(); loadHours(); vacRender(); trainRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore(); toolsInit(); homeNow();
+  enMove(); enInit(); loadHours(); vacRender(); trainRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore(); toolsInit(); homeNow();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   accLoad();
   try {
