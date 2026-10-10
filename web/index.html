@@ -132,6 +132,11 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .prog{height:8px;border-radius:8px;background:var(--card2);margin:14px 0 12px;overflow:hidden}
 .prog i{display:block;height:100%;border-radius:8px;background:var(--green)}
 .prog.over i{background:var(--amber)}
+.prog{position:relative}
+.prog em{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--text);opacity:.7}
+.sum .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sum .pair>div>small{display:block;color:var(--muted);font-size:13px;font-weight:600;margin-bottom:4px}
+.sum .pair .big{font-size:30px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stats div{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:10px;min-width:0}
 .stats small{display:block;color:var(--muted);font-size:11.5px}
@@ -858,9 +863,14 @@ function loadHours() {
 function renderHours(r) {
   if (r.error || r.ym !== YM) return;
   const norm = r.norm * 60, left = norm - r.work, over = left < 0;
+  // норма на сегодня - рабочие часы производственного календаря с 1-го числа по сегодня включительно
+  const now = new Date(), cur = r.ym === `${now.getFullYear()}-${p2(now.getMonth() + 1)}`, today = cur && monthCal(r.ym, now.getDate()).hours * 60;
+  const gap = cur && r.work - today;
   $('hoursSum').innerHTML =
-    `<div class="card sum"><div class="big">${hm(r.work)} <small>из ${+r.norm} ч нормы</small></div>
-      <div class="prog ${over ? 'over' : ''}"><i style="width:${norm ? Math.min(100, r.work / norm * 100) : 0}%"></i></div>
+    `<div class="card sum"><div class="pair"><div><small>Отработано</small><div class="big">${hs(r.work)}</div></div>
+        <div><small>${cur ? `Норма на ${p2(now.getDate())}.${p2(now.getMonth() + 1)}` : 'Норма месяца'}</small><div class="big">${(cur ? today : norm) / 60} ч</div></div></div>
+      ${cur ? `<div class="normf" style="margin-top:8px;color:${gap > 0 ? 'var(--amber)' : 'var(--muted)'}">${gap === 0 ? 'Ровно по норме на сегодня' : `${gap > 0 ? 'Больше' : 'Меньше'} нормы на сегодня на ${hs(Math.abs(gap))}`} · норма месяца ${+r.norm} ч</div>` : ''}
+      <div class="prog ${over ? 'over' : ''}"><i style="width:${norm ? Math.min(100, r.work / norm * 100) : 0}%"></i>${cur && norm ? `<em style="left:${Math.min(100, today / norm * 100)}%"></em>` : ''}</div>
       <div class="stats"><div><small>${over ? 'Переработка' : 'До нормы'}</small><b>${hs(left)}</b></div>
         <div><small>Ночные</small><b>${hs(r.night)}</b></div><div><small>Поездок</small><b>${r.items.length}</b></div></div>
       <div class="normf">Норма по производственному календарю (40-часовая неделя)</div></div>` +
@@ -1331,8 +1341,8 @@ const isShort = (y, m, d) => {
   const n = new Date(Date.UTC(y, m, d + 1));
   return HOLIDAYS.includes(`${p2(n.getUTCMonth() + 1)}-${p2(n.getUTCDate())}`);
 };
-function monthCal(ym) {
-  const y = +ym.slice(0, 4), m = +ym.slice(5, 7) - 1, n = new Date(y, m + 1, 0).getDate();
+function monthCal(ym, upto) {   // upto - посчитать только дни с 1-го по этот день месяца
+  const y = +ym.slice(0, 4), m = +ym.slice(5, 7) - 1, n = Math.min(upto || 31, new Date(y, m + 1, 0).getDate());
   let days = 0, hours = 0, short = 0;
   for (let d = 1; d <= n; d++) if (isWork(dayKind(y, m, d))) { days++; hours += 8; if (isShort(y, m, d)) { hours--; short++; } }
   return {days, hours, short, off: n - days, exact: !!CAL[y]};
