@@ -606,8 +606,18 @@ html.big{zoom:1.15}
         <div class="kv"><span>Московское время</span><b id="clkMsk"></b></div>
         <div class="kv"><span>Разница с Москвой</span><b id="clkDiff"></b></div>
         <div class="kv"><span>Всемирное время (UTC)</span><b id="clkUtc"></b></div>
+        <div class="kv"><span id="clkNightT">Ночное время</span><b id="clkNight"></b></div>
       </div>
-      <p class="note">Время берётся с часов телефона. Москва - UTC+3 круглый год, перехода на летнее время нет.</p>
+      <div id="clkTripBox" hidden><h2>Поездка</h2><div class="card list" id="clkTrip"></div></div>
+      <div id="clkConvBox"><h2>Перевод времени</h2>
+        <div class="card form">
+          <div class="two keep">
+            <label>Время<input type="time" id="clkCvT" oninput="clkConv()"></label>
+            <label>Это время<select class="inp" id="clkCvD" onchange="clkConv()"><option value="loc">местное</option><option value="msk">московское</option></select></label>
+          </div>
+          <div class="pre" id="clkCvOut"></div>
+        </div></div>
+      <p class="note">Время берётся с часов телефона. Москва - UTC+3 круглый год, перехода на летнее время нет; поезда идут по московскому времени. Ночное время - с 22:00 до 06:00 (статья 96 Трудового кодекса). Поездка - незавершённая поездка из «Учёта часов» (время явки - как вы его записали, считаю его местным); подъём и явка - из «Бригадника», если там та же явка. Непрерывная работа - не больше 12 часов.</p>
     </div>
 
     <div id="t-timer">
@@ -1290,7 +1300,7 @@ function shCalc() {
 
 // ---- инструменты: калькулятор, часы, таймер
 const TOOLS = {calc: ['Калькулятор', 'Сложение, вычитание, умножение, деление и проценты.'],
-  clock: ['Часы', 'Местное и московское время.'], timer: ['Таймер', 'Обратный отсчёт со звуковым сигналом.']};
+  clock: ['Часы', 'Местное и московское время, ночное время, текущая поездка.'], timer: ['Таймер', 'Обратный отсчёт со звуковым сигналом.']};
 let TL = load('toolsMode', {m: 'calc'}).m;
 if (!TOOLS[TL]) TL = 'calc';
 function toolsMode(m) {
@@ -1300,6 +1310,10 @@ function toolsMode(m) {
   $('toolsH').textContent = h; $('toolsSub').textContent = sub;
   if (TL === 'calc') kcRender();
   if (TL === 'timer') twRender();
+  if (TL === 'clock') {   // поездка - по свежим данным; в переводе времени - текущее время
+    $('clkTrip').dataset.k = '';
+    if (!$('clkCvT').value) { const d = new Date(); $('clkCvT').value = `${p2(d.getHours())}:${p2(d.getMinutes())}`; clkConv(); }
+  }
   tick();
 }
 
@@ -1408,6 +1422,41 @@ function clkTick(now) {
   $('clkMsk').textContent = hms(msk) + (msk.getDate() !== now.getDate() ? ` (${p2(msk.getDate())}.${p2(msk.getMonth() + 1)})` : '');
   $('clkDiff').textContent = diff || 'нет';
   $('clkUtc').textContent = hms(new Date(+now - off * 60000));
+  const h = now.getHours(), night = h >= 22 || h < 6, edge = new Date(now); edge.setHours(night ? 6 : 22, 0, 0, 0);
+  if (night && h >= 22) edge.setDate(edge.getDate() + 1);
+  $('clkNightT').textContent = night ? 'Ночное время идёт, до 06:00' : 'До ночного времени (22:00)';
+  $('clkNight').textContent = dur(edge - now);
+  $('clkConvBox').hidden = !diff;
+  if (now.getSeconds() === 0 || !$('clkTrip').dataset.k) clkTrip(now);   // поездка - раз в минуту
+}
+const dur = ms => { const m = Math.max(0, Math.floor(ms / 60000)); return `${Math.floor(m / 60)} ч ${p2(m % 60)} мин`; };
+const hmD = (d, now) => `${p2(d.getHours())}:${p2(d.getMinutes())}` + (d.toDateString() !== now.toDateString() ? ` (${p2(d.getDate())}.${p2(d.getMonth() + 1)})` : '');
+function clkTrip(now) {   // незавершённая поездка из учёта часов и отдых из Бригадника - живой отсчёт
+  $('clkTrip').dataset.k = '1';
+  const t = crOpen(), row = (k, v, w) => `<div class="kv"><span>${k}</span><b${w ? ' style="color:var(--amber)"' : ''}>${v}</b></div>`;
+  let h = '';
+  if (t) {
+    const a = new Date(t.start), pl = crPlan(), same = pl && t.start.slice(11, 16) === CR.a;
+    const rs = same && new Date(+a + (pl.work + pl.gap) * 60000), re = same && new Date(+rs + pl.rest * 60000), wake = same && new Date(+re - int(CR.wake) * 60000);
+    const work = (from, label) => {   // работа с момента from: сколько уже и когда истекут 12 часов
+      const on = now - from, lim = new Date(+from + MAX_CONT * 60000);
+      return row(label, dur(on)) + (on < MAX_CONT * 60000 ? row(`12 часов непрерывной работы - в ${hmD(lim, now)}`, `через ${dur(lim - now)}`)
+        : row('Непрерывная работа больше 12 часов', `с ${hmD(lim, now)}`, 1));
+    };
+    if (now < a) h = row(`Явка ${dt(t.start)}`, `через ${dur(a - now)}`);
+    else if (now - a > MAX_TRIP * 60000) h = row(`Поездка с ${dt(t.start)} не завершена`, 'допишите в «Учёте часов»', 1);
+    else if (!same || now < rs) h = work(a, `На работе с явки ${dt(t.start)}`) + (same ? row(`Отдых в бригаднике с ${hmD(rs, now)}`, `через ${dur(rs - now)}`) : '');
+    else if (now < re) h = row(`Отдых в бригаднике с ${hmD(rs, now)}`, `идёт ${dur(now - rs)}`) +
+      (now < wake ? row(`Подъём в ${hmD(wake, now)}`, `через ${dur(wake - now)}`) : '') + row(`Явка не раньше ${hmD(re, now)}`, `через ${dur(re - now)}`);
+    else h = work(re, `На работе после отдыха (с ${hmD(re, now)})`);
+  }
+  $('clkTrip').innerHTML = h; $('clkTripBox').hidden = !h;
+}
+function clkConv() {   // местное <-> московское
+  const v = clock($('clkCvT').value), off = -new Date().getTimezoneOffset(), k = $('clkCvD').value === 'loc' ? MSK - off : off - MSK;
+  if (v === null) { $('clkCvOut').textContent = ''; return; }
+  const r = v + k, day = Math.floor(r / 1440);
+  $('clkCvOut').innerHTML = `${$('clkCvD').value === 'loc' ? 'По Москве' : 'По местному'}: <b>${hhmm(r)}</b>${day ? (day > 0 ? ', следующие сутки' : ', предыдущие сутки') : ''}`;
 }
 
 // таймер: идёт по времени окончания, поэтому не сбивается при переходе по разделам и перезагрузке страницы
