@@ -525,9 +525,11 @@ html.big{zoom:1.15}
     </form>
     <div id="hoursNext"></div>
 
-    <h2>Поездки за месяц</h2>
-    <div id="trips"></div>
-    <button class="morebtn" id="csvBtn" style="margin-top:10px;display:none" onclick="exportTrips()">Выгрузить месяц в таблицу</button>
+    <details class="fold" data-fold="trips">
+      <summary>Поездки за месяц <span id="tripsSum"></span><svg><use href="#i-chev"/></svg></summary>
+      <div id="trips"></div>
+      <button class="morebtn" id="csvBtn" style="margin-top:10px;display:none" onclick="exportTrips()">Выгрузить месяц в таблицу</button>
+    </details>
     <button class="morebtn" style="margin-top:10px" onclick="moveFile(t => $('hoursSaved').textContent = t)">Сохранить копию в файл</button>
     <p class="note" id="hoursSaved" style="margin-top:8px">Все поездки и данные сайта - одним файлом. Вернуть их: ⚙️ Настройки → «Загрузить файл».</p>
 
@@ -898,6 +900,8 @@ function renderHours(r) {
     return (t ? `<small class="info">${t}</small>` : '') + (x.pax_from ? `<small>пассажиром: ${esc(x.pax_from)} → ${esc(x.pax_to)}</small>` : '') + (num(x.weight) ? `<small><button class="linkbtn" onclick="tripTo(${x.id},'vu')">Справка ВУ-45</button> · <button class="linkbtn" onclick="tripTo(${x.id},'shoe')">Башмаки</button></small>` : '');
   };
   const acts = x => `<span class="acts"><button class="x" onclick="editShift(${x.id})" aria-label="Изменить поездку">✎</button><button class="x" onclick="delShift(${x.id})" aria-label="Удалить поездку">✕</button></span>`;
+  const nt = r.items.length + r.open.length;
+  $('tripsSum').textContent = nt ? `· ${nt} ${plural(nt, 'поездка', 'поездки', 'поездок')}` : '';
   $('trips').innerHTML = r.items.length || r.open.length ? `<div class="card">` + r.open.map(x =>
     `<div class="trip"><div><div class="when">${dt(x.start)} → …</div><b>Не завершена</b>${info(x)}<small><button class="linkbtn" onclick="tripTo(${x.id},'rest')">Бригадник - когда явка из оборота</button></small>
       <small class="w">Допишите окончание работы (кнопка ✎) - посчитаю часы и отдых.</small></div>${acts(x)}</div>`).join('') + r.items.map(x =>
