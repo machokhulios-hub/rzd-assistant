@@ -78,6 +78,14 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 /* учёт часов */
 .mon{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .mon b{font-size:18px;font-weight:800}
+.msel{display:flex;gap:8px}
+.msel select{padding:9px 12px;font-weight:700;width:auto}
+.cal div{aspect-ratio:1;border-radius:12px;font-weight:600;font-variant-numeric:tabular-nums;display:grid;place-items:center;position:relative}
+.cal div.we{color:var(--red)}
+.cal div.sh::after{content:"";position:absolute;bottom:5px;width:4px;height:4px;border-radius:50%;background:var(--amber)}
+.cal div.wk{background:rgba(52,211,153,.16)}
+.cal div.now{box-shadow:inset 0 0 0 1px var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:12px;color:var(--muted)}
 .mon button{width:42px;height:42px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:18px;display:grid;place-items:center}
 .sum{padding:16px}
 .sum .big{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums}
@@ -330,8 +338,9 @@ html.big{zoom:1.15}
   <section class="view" id="v-hours">
     <h1>Учёт часов</h1><p class="sub">Записывайте поездки - посчитаю отдых и итог за месяц.</p>
     <div class="mon"><button onclick="shiftMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
-      <b id="monName"></b><button onclick="shiftMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
+      <span class="msel"><select class="inp" id="monSel" onchange="pickMonth()" aria-label="Месяц"></select><select class="inp" id="yearSel" onchange="pickMonth()" aria-label="Год"></select></span><button onclick="shiftMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
     <div id="hoursSum"></div>
+    <div id="prodCal"></div>
 
     <h2 id="tripTitle">Добавить поездку</h2>
     <form class="card form" onsubmit="event.preventDefault();addShift()">
@@ -577,7 +586,7 @@ function shiftMonth(k) {
   loadHours();
 }
 function loadHours() {
-  $('monName').textContent = `${MONTHS[+YM.slice(5, 7) - 1]} ${YM.slice(0, 4)}`;
+  fillMonthSel();
   renderHours(hoursData(YM));
 }
 function renderHours(r) {
@@ -591,6 +600,7 @@ function renderHours(r) {
       <div class="normf">Норма по производственному календарю (40-часовая неделя)</div></div>` +
     (r.last ? `<div class="card next"><span class="badge" style="--c:var(--green)">${ic('clock')}</span><span><small>Следующая явка не раньше</small>
       <b>${dt(r.last.next)}</b><small>отдых дома ${hm(r.last.home)} после поездки ${dt(r.last.start)}</small></span></div>` : '');
+  prodCal(r.ym);
   const en = monthEnergy(r.ym);
   if (en) $('hoursSum').insertAdjacentHTML('beforeend', `<div class="card next"><span class="badge" style="--c:var(--amber)">${ic('sun')}</span><span><small>Электроэнергия за месяц</small>
     <b>${kwh(en.use)}</b><small>${en.rec ? `рекуперация ${kwh(en.rec)}` + (en.use ? ` · ${ru(en.rec / en.use * 100)} % от расхода` : '') : 'рекуперация не записана'} · поездок со счётчиками: ${en.n}</small></span></div>`);
@@ -858,11 +868,45 @@ function vuCalc() {
 // ---- учёт часов: поездки хранятся в браузере на этом устройстве (localStorage).
 // Правила - из «Особенностей режима рабочего времени и времени отдыха» (приказ Минтранса № 339).
 const K_HOME = 2.6, MIN_HOME = 960, MAX_CONT = 720, MAX_TRIP = 4320;
-// норма часов при 40-часовой неделе по производственному календарю; изменить её нельзя
-const NORMS = {'2026-01': 120, '2026-02': 152, '2026-03': 168, '2026-04': 175, '2026-05': 151, '2026-06': 167,
-  '2026-07': 184, '2026-08': 168, '2026-09': 176, '2026-10': 176, '2026-11': 159, '2026-12': 176,
-  '2027-01': 120, '2027-02': 152, '2027-03': 175, '2027-04': 175, '2027-05': 151, '2027-06': 167,
-  '2027-07': 176, '2027-08': 176, '2027-09': 176, '2027-10': 168, '2027-11': 159, '2027-12': 175};
+// Производственный календарь (40-часовая неделя). Дни переноса - по постановлениям Правительства: в них только отличия от обычных
+// выходных и праздников статьи 112 ТК. Для остальных лет переносов нет: праздник на выходной переношу на ближайший будний день.
+const CAL = {
+  2026: {off: ['01-09', '03-09', '05-11', '12-31'], work: []},
+  2027: {off: ['02-22', '05-03', '05-10', '06-14', '11-05', '12-31'], work: ['02-20']}};
+const calMd = t => { const q = new Date(t); return `${p2(q.getUTCMonth() + 1)}-${p2(q.getUTCDate())}`; };
+const calDow = t => (new Date(t).getUTCDay() + 6) % 7;
+const CAL_AUTO = {};
+function calYear(y) {   // {off, work} - переносы года: по постановлению, а без него - праздник на выходной уходит на ближайший будний день
+  if (CAL[y]) return CAL[y];
+  if (CAL_AUTO[y]) return CAL_AUTO[y];
+  const off = [], busy = t => calDow(t) > 4 || HOLIDAYS.includes(calMd(t)) || off.includes(calMd(t));
+  for (let t = Date.UTC(y, 0, 1); new Date(t).getUTCFullYear() === y; t += 864e5) {
+    if (!HOLIDAYS.includes(calMd(t)) || calDow(t) < 5) continue;
+    let u = t + 864e5;
+    if (calMd(t) <= '01-08') u = Date.UTC(y, 0, 9);   // январские каникулы: перенос - после 8 января
+    while (busy(u)) u += 864e5;
+    if (new Date(u).getUTCFullYear() === y) off.push(calMd(u));
+  }
+  return CAL_AUTO[y] = {off, work: []};
+}
+const dayKind = (y, m, d) => {   // m - с нуля; 'hol' праздник, 'off' выходной, 'wk' рабочий день
+  const t = Date.UTC(y, m, d), md = calMd(t), c = calYear(y);
+  if (HOLIDAYS.includes(md)) return 'hol';
+  if (c.work.includes(md)) return 'wk';
+  return c.off.includes(md) || calDow(t) > 4 ? 'off' : 'wk';
+};
+const isWork = k => k === 'wk';
+const isShort = (y, m, d) => {
+  if (!isWork(dayKind(y, m, d))) return false;
+  const n = new Date(Date.UTC(y, m, d + 1));
+  return HOLIDAYS.includes(`${p2(n.getUTCMonth() + 1)}-${p2(n.getUTCDate())}`);
+};
+function monthCal(ym) {
+  const y = +ym.slice(0, 4), m = +ym.slice(5, 7) - 1, n = new Date(y, m + 1, 0).getDate();
+  let days = 0, hours = 0, short = 0;
+  for (let d = 1; d <= n; d++) if (isWork(dayKind(y, m, d))) { days++; hours += 8; if (isShort(y, m, d)) { hours--; short++; } }
+  return {days, hours, short, off: n - days, exact: !!CAL[y]};
+}
 const HRS = load('hours', {shifts: [], norms: {}, seq: 0});
 // время считаем в минутах, как введено (местное/московское), без часовых поясов
 const tm = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10), +s.slice(11, 13), +s.slice(14, 16)) / 60000;
@@ -881,13 +925,7 @@ function holiday(a, b, lo, hi) {   // минуты отрезка [a, b] в пр
   return total;
 }
 const bounds = ym => [Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1, 1) / 60000, Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 1) / 60000];
-function defaultNorm(ym) {
-  if (NORMS[ym]) return NORMS[ym];
-  const [lo, hi] = bounds(ym);   // календаря на этот год нет: будни x 8 без учёта праздников
-  let n = 0;
-  for (let t = lo; t < hi; t += 1440) n += [1, 2, 3, 4, 5].includes(new Date(t * 60000).getUTCDay());
-  return 8 * n;
-}
+const defaultNorm = ym => monthCal(ym).hours;
 function tripCalc(x, lo = -Infinity, hi = Infinity) {   // lo/hi - границы месяца: поездка через границу делится по календарю
   const a = tm(x.start), b = tm(x.end), segs = x.rest_start ? [[a, tm(x.rest_start)], [tm(x.rest_end), b]] : [[a, b]];
   const sum = f => segs.reduce((s, [p, q]) => s + f(p, q), 0);
@@ -1078,6 +1116,29 @@ async function offlineAll() {   // прогоняем все файлы чере
   OFFRUN = false;
   if (!bad) { UI.offline = META.v; save('ui', UI); navigator.serviceWorker.controller.postMessage({keep: META.v}); }
   renderMore(bad ? `Не скачалось файлов: ${bad}. Проверьте связь и повторите.` : '');
+}
+
+// ---- производственный календарь: любой месяц и год, норма пересчитывается
+function fillMonthSel() {
+  const y = +YM.slice(0, 4), m = +YM.slice(5, 7) - 1, ms = $('monSel'), ys = $('yearSel');
+  if (!ms.options.length) ms.innerHTML = MONTHS.map((n, i) => `<option value="${i}">${n}</option>`).join('');
+  if (!ys.options.length || +ys.options[0].value > y - 1 || +ys.options[ys.options.length - 1].value < y + 1)
+    ys.innerHTML = Array.from({length: 17}, (_, i) => y - 8 + i).map(v => `<option>${v}</option>`).join('');
+  ms.value = m; ys.value = y;
+}
+function pickMonth() { YM = `${$('yearSel').value}-${p2(+$('monSel').value + 1)}`; loadHours(); }
+function prodCal(ym) {
+  const y = +ym.slice(0, 4), m = +ym.slice(5, 7) - 1, n = new Date(y, m + 1, 0).getDate(), first = (new Date(y, m, 1).getDay() + 6) % 7, c = monthCal(ym);
+  const now = new Date(), today = now.getFullYear() === y && now.getMonth() === m ? now.getDate() : 0, word = k => plural(k, 'день', 'дня', 'дней');
+  let g = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(w => `<i>${w}</i>`).join('') + '<span></span>'.repeat(first);
+  for (let d = 1; d <= n; d++) {
+    const k = dayKind(y, m, d), sat = (first + d - 1) % 7 > 4;
+    g += `<div class="${[k !== 'wk' && 'we', k === 'wk' && sat && 'wk', isShort(y, m, d) && 'sh', d === today && 'now'].filter(Boolean).join(' ')}">${d}</div>`;
+  }
+  $('prodCal').innerHTML = `<h2>Производственный календарь</h2><div class="card"><div class="cal">${g}</div>
+    <div class="legend"><span style="color:var(--red)">● выходной, праздник</span><span style="color:var(--amber)">● сокращённый день, 7 ч</span><span style="color:var(--green)">● рабочая суббота</span></div>
+    <div class="stats" style="margin-top:14px"><div><small>Рабочих</small><b>${c.days} ${word(c.days)}</b></div><div><small>Выходных</small><b>${c.off} ${word(c.off)}</b></div><div><small>Норма</small><b>${c.hours} ч</b></div></div>
+    ${c.exact ? '' : '<p class="note" style="margin:12px 0 0">На этот год постановления о переносах выходных у меня нет: праздники на выходные перенесены по общему правилу, поэтому норма ориентировочная.</p>'}</div>`;
 }
 
 // ---- календарь отпуска: первое нажатие - первый день, второе - последний
