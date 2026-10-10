@@ -224,6 +224,14 @@ nav button.on{color:var(--text)}nav button.on svg{color:var(--red)}
 .sk{border-radius:12px;background:linear-gradient(90deg,var(--card2) 25%,#2a2f38 37%,var(--card2) 63%);background-size:400% 100%;animation:sk 1.2s infinite}
 @keyframes sk{from{background-position:100% 0}to{background-position:0 0}}
 .empty{padding:22px;text-align:center;color:var(--muted)}
+.swipe{display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;align-items:flex-start;transition:height .2s}
+.swipe::-webkit-scrollbar{display:none}
+.swipe>div{flex:0 0 100%;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}
+.swipe .slideh{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:2px 0 10px}
+.swipe .slideh span{text-transform:none;letter-spacing:0;font-weight:600;color:var(--text);opacity:.85}
+.dots{display:flex;justify-content:center;gap:8px;padding:10px 0 0}
+.dots button{width:8px;height:8px;border-radius:50%;background:var(--line);transition:width .2s,background .2s}
+.dots button.on{width:22px;border-radius:4px;background:var(--muted)}
 /* поиск и документы */
 .field{align-items:center}
 .field input{flex:1;min-width:0;height:44px;background:none;border:0;outline:0;-webkit-appearance:none;appearance:none}
@@ -484,7 +492,15 @@ html.big{zoom:1.15}
     <h1>Учёт часов</h1><p class="sub">Записывайте поездки - посчитаю отдых и итог за месяц.</p>
     <div class="mon"><button onclick="shiftMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
       <span class="msel"><select class="inp" id="monSel" onchange="pickMonth()" aria-label="Месяц"></select><select class="inp" id="yearSel" onchange="pickMonth()" aria-label="Год"></select></span><button onclick="shiftMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
-    <div id="hoursSum"></div>
+    <div class="swipe" id="hoursSwipe">
+      <div id="hoursSum"></div>
+      <div>
+        <div class="slideh">Поездки за месяц <span id="tripsSum"></span></div>
+        <div id="trips"></div>
+        <button class="morebtn" id="csvBtn" style="margin-top:10px;display:none" onclick="exportTrips()">Выгрузить месяц в таблицу</button>
+      </div>
+    </div>
+    <div class="dots" id="hoursDots"><button class="on" onclick="swipeTo(0)" aria-label="Итог месяца"></button><button onclick="swipeTo(1)" aria-label="Поездки за месяц"></button></div>
 
     <h2 id="tripTitle">Добавить поездку</h2>
     <form class="card form" onsubmit="event.preventDefault();addShift()">
@@ -525,12 +541,7 @@ html.big{zoom:1.15}
     </form>
     <div id="hoursNext"></div>
 
-    <details class="fold" data-fold="trips">
-      <summary>Поездки за месяц <span id="tripsSum"></span><svg><use href="#i-chev"/></svg></summary>
-      <div id="trips"></div>
-      <button class="morebtn" id="csvBtn" style="margin-top:10px;display:none" onclick="exportTrips()">Выгрузить месяц в таблицу</button>
-    </details>
-    <button class="morebtn" style="margin-top:10px" onclick="moveFile(t => $('hoursSaved').textContent = t)">Сохранить копию в файл</button>
+    <button class="morebtn" style="margin-top:26px" onclick="moveFile(t => $('hoursSaved').textContent = t)">Сохранить копию в файл</button>
     <p class="note" id="hoursSaved" style="margin-top:8px">Все поездки и данные сайта - одним файлом. Вернуть их: ⚙️ Настройки → «Загрузить файл».</p>
 
     <details class="fold" data-fold="pay">
@@ -888,7 +899,7 @@ function renderHours(r) {
       ${cur ? `<div class="normf" style="margin-top:8px;color:${gap > 0 ? 'var(--amber)' : 'var(--muted)'}">${gap === 0 ? 'Ровно по норме на сегодня' : `${gap > 0 ? 'Больше' : 'Меньше'} нормы на сегодня на ${hs(Math.abs(gap))}`} · норма месяца ${+r.norm} ч</div>` : ''}
       <div class="prog ${over ? 'over' : ''}"><i style="width:${norm ? Math.min(100, r.work / norm * 100) : 0}%"></i>${cur && norm ? `<em style="left:${Math.min(100, today / norm * 100)}%"></em>` : ''}</div>
       <div class="stats"><div><small>${over ? 'Переработка' : 'До нормы'}</small><b>${hs(left)}</b></div>
-        <div><small>Ночные</small><b>${hs(r.night)}</b></div><div><small>Поездок</small><b>${r.items.length}</b></div></div>
+        <div><small>Ночные</small><b>${hs(r.night)}</b></div><div onclick="swipeTo(1)" style="cursor:pointer"><small>Поездок</small><b>${r.items.length} →</b></div></div>
       <div class="normf">Норма по производственному календарю (40-часовая неделя)</div></div>`;
   $('hoursNext').innerHTML = (r.last ? `<div class="card next"><span class="badge" style="--c:var(--green)">${ic('clock')}</span><span><small>Следующая явка не раньше</small>
       <b>${dt(r.last.next)}</b><small>отдых дома ${hm(r.last.home)} после поездки ${dt(r.last.start)}</small></span></div>` : '');
@@ -913,6 +924,14 @@ function renderHours(r) {
   payRender(r);
   if (r.ym === (d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}`)(new Date())) $('tileHours').textContent = `${hm(r.work)} из ${+r.norm} ч`;
 }
+// итог месяца и поездки - карусель: смахнуть вбок; высота - по видимому слайду, чтобы под коротким не было пустоты
+function swipeFit() {
+  const w = $('hoursSwipe'), k = w.scrollLeft / (w.clientWidth + 12), s = w.children;
+  const h = Math.max(s[Math.floor(k)]?.offsetHeight || 0, s[Math.ceil(k)]?.offsetHeight || 0);
+  if (h) w.style.height = h + 'px';
+  [...$('hoursDots').children].forEach((d, i) => d.classList.toggle('on', i === Math.round(k)));
+}
+function swipeTo(i) { const w = $('hoursSwipe'); w.scrollTo({left: i * (w.clientWidth + 12), behavior: 'smooth'}); }
 // следование пассажиром: станции - из списка PAX_ST (его заполним), пока список пуст - станцию можно вписать
 const PAX_ST = [];
 let paxOn = false;
@@ -2701,6 +2720,9 @@ async function accLogout() {
   document.querySelectorAll('details.fold').forEach(d => { d.open = !!FOLD[d.dataset.fold]; d.addEventListener('toggle', () => { FOLD[d.dataset.fold] = d.open; save('folds', FOLD); }); });
   try { if (sessionStorage.getItem('moved')) { sessionStorage.removeItem('moved'); go('more'); moveSay('Данные перенесены.'); } } catch (e) {}
   $('paxList').innerHTML = PAX_ST.map(n => `<option value="${esc(n)}">`).join('');
+  $('hoursSwipe').addEventListener('scroll', swipeFit, {passive: true});
+  new ResizeObserver(swipeFit).observe($('hoursSwipe'));
+  [...$('hoursSwipe').children].forEach(c => new ResizeObserver(swipeFit).observe(c));
   enMove(); enInit(); loadHours(); vacRender(); trainRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore(); toolsInit(); homeNow();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   accLoad();
