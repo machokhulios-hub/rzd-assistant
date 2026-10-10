@@ -31,7 +31,7 @@ h2+h2,h2+h3,h3+h3{margin-top:-.3em}
 table{border-collapse:collapse;font-size:.82em;line-height:1.35;min-width:60%}
 td,th{border:1px solid #9a9a9a;padding:4px 6px;vertical-align:top;text-align:left;min-width:4.5em}
 th{background:#f2f2f2;font-weight:700}
-figure{margin:.8em 0;text-align:center}figure img{max-width:100%;height:auto}
+figure{margin:.8em 0;text-align:center}figure img{max-width:100%;height:auto}figure.form img{width:100%}
 a[id]{display:block;position:relative;top:-50px;visibility:hidden}"""
 
 
@@ -84,7 +84,9 @@ def _add(segs, line):
         segs.extend(line)
         return
     a, b = segs[-1][0].rstrip(), line[0][0].lstrip()
-    if re.search(r"[а-яёa-z]-$", a) and re.match(r"[а-яё]", b):
+    if re.search(r"[а-яё]{4,}(?:ико|но)-$", a) and re.match(r"[а-яё]", b):
+        segs[-1] = (a, segs[-1][1])            # «технико-/распорядительных» - дефис составного слова остаётся
+    elif re.search(r"[а-яёa-z]-$", a) and re.match(r"[а-яё]", b):
         segs[-1] = (a[:-1], segs[-1][1])
     else:
         segs[-1] = (a + " ", segs[-1][1])
@@ -174,6 +176,7 @@ def pdf_html(path: Path, img_dir: Path, img_url: str) -> str:
                 items.append((bb.y0, bb.x0, "line", {
                     "segs": [(s["text"], _bold(s)) for s in l["spans"]],
                     "x0": spans[0]["bbox"][0], "x1": spans[-1]["bbox"][2], "y0": bb.y0, "y1": bb.y1,
+                    "two": any(b2["bbox"][0] - a2["bbox"][2] > 20 for a2, b2 in zip(spans, spans[1:])),
                     "size": max(s["size"] for s in spans),
                     "ital": all(s["flags"] & 2 or "Italic" in s["font"] for s in spans),
                     "col": any(s["color"] & 0xff > 0x80 and s["color"] >> 16 < 0x80 for s in spans)}))
@@ -182,6 +185,7 @@ def pdf_html(path: Path, img_dir: Path, img_url: str) -> str:
         for it in items:
             if it[2] == "line" and merged and merged[-1][2] == "line" and abs(merged[-1][3]["y0"] - it[3]["y0"]) < 2.5 and it[3]["x0"] >= merged[-1][3]["x1"] - 2:
                 a, b = merged[-1][3], it[3]
+                a["two"] = a["two"] or b["two"] or b["x0"] - a["x1"] > 20    # текст в две колонки на одной высоте
                 a["segs"] = a["segs"] + [(" ", False)] + b["segs"]
                 a["x1"] = b["x1"]
                 continue
@@ -194,6 +198,28 @@ def pdf_html(path: Path, img_dir: Path, img_url: str) -> str:
         else:
             left, right = 0, W
         mid = (left + right) / 2
+        # бланки и формы в две колонки («Могу ли отправить... / Ожидаю поезд...») текстом не передать -
+        # такой участок показываем фрагментом оригинала
+        runs, i = [], 0
+        while i < len(merged):
+            if merged[i][2] == "line" and merged[i][3]["two"]:
+                j = i
+                for k in range(i + 1, len(merged)):
+                    if merged[k][2] != "line":
+                        break
+                    if merged[k][3]["two"]:
+                        if merged[k][3]["y0"] - merged[j][3]["y1"] > merged[j][3]["size"] * 3:
+                            break
+                        j = k
+                if j > i:
+                    runs.append((i, j))
+                    i = j + 1
+                    continue
+            i += 1
+        for i, j in reversed(runs):
+            ys = [merged[k][3] for k in range(i, j + 1)]
+            clip = pymupdf.Rect(min(left, min(d["x0"] for d in ys)) - 4, ys[0]["y0"] - 4, max(right, max(d["x1"] for d in ys)) + 4, max(d["y1"] for d in ys) + 4)
+            merged[i:j + 1] = [(clip.y0, clip.x0, "form", clip)]
 
         out.append(f'<a id="page={pn}"></a>')    # абзац, перешедший со страницы, встанет после якоря - поиск откроет его начало
         for _, _, kind, d in merged:
@@ -205,19 +231,27 @@ def pdf_html(path: Path, img_dir: Path, img_url: str) -> str:
                 flush()
                 rows = d
                 if max(len(r) for r in rows) == 1 or len(rows) == 1 and len(rows[0]) <= 2:
-                    txt = "".join(f"<p>{esc(c)}</p>" for r in rows for c in r if c)
+                    segs, txt = [], []     # строки врезки - в абзацы: склеиваем, пока строка не кончилась точкой
+                    for c in (c for r in rows for c in r if c):
+                        _add(segs, [(c, False)])
+                        if re.search(r"[.;:]$", c):
+                            txt.append(_segs_html(segs)); segs = []
+                    if segs:
+                        txt.append(_segs_html(segs))
+                    txt = "".join(f"<p>{t}</p>" for t in txt)
                     out.append(f'<div class="box">{txt}</div>')
                 else:
                     trs = "".join("<tr>" + "".join(f"<td>{esc(c)}</td>" for c in r) + "</tr>" for r in rows)
                     out.append(f'<div class="tbl"><table>{trs}</table></div>')
                 continue
-            if kind == "img":
+            if kind in ("img", "form"):
                 flush()
                 nimg += 1
                 name = f"{nimg}.png"
                 try:
-                    p.get_pixmap(clip=d, dpi=150).save(img_dir / name)
-                    out.append(f'<figure><img src="{img_url}/{name}" alt="" loading="lazy"></figure>')
+                    p.get_pixmap(clip=d, dpi=200 if kind == "form" else 150).save(img_dir / name)
+                    cls = ' class="form"' if kind == "form" else ""      # бланк - во всю ширину, чтобы читался
+                    out.append(f'<figure{cls}><img src="{img_url}/{name}" alt="" loading="lazy"></figure>')
                 except Exception:
                     pass
                 continue
@@ -238,12 +272,15 @@ def pdf_html(path: Path, img_dir: Path, img_url: str) -> str:
             else:
                 k = "p"
             same = para is not None and para["page"] == pn
-            if para is None or para["kind"] != k:
+            if para is not None and not para["end"] and k in ("p", "ed") and para["kind"] in ("p", "ed"):
+                k, new = para["kind"], False     # прошлая строка кончилась переносом - это тот же абзац
+            elif para is None or para["kind"] != k:
                 new = True
             elif k == "p":     # новый абзац: красная строка, пустая строка, прошлая строка не дошла до края, большой просвет
                 # прошлая строка кончилась, хотя первое слово этой строки на ней помещалось - значит, там конец абзаца
                 word = len(plain.split()[0]) + 1 if plain.split() else 1
-                short = para["end"] and right - para["x1"] > word * para["cw"] + 6
+                room = right - para["x1"]     # без знака в конце строки абзац кончается, только если строка заметно короче
+                short = para["end"] and room > word * para["cw"] + 6 and (para["punct"] or room > (right - left) * .3)
                 new = ind > 8 or para["gap"] or short or same and d["y0"] - para["y1"] > para["size"] * 1.1
             else:      # заголовок раздела («I. Общие положения») не приклеиваем к заголовку документа
                 new = not same or d["y0"] - para["y1"] > para["size"] * (1.6 if k == "h" else .9) or k == "h" and bool(HEAD_RE.match(plain))
@@ -253,7 +290,8 @@ def pdf_html(path: Path, img_dir: Path, img_url: str) -> str:
             if k in ("c", "r") and para["segs"]:
                 para["segs"].append(("\u2028", False))   # в грифе и строках по центру - разрывы строк как в оригинале
             _add(para["segs"], d["segs"])
-            para.update(page=pn, x1=d["x1"], y1=d["y1"], gap=False, end=not plain.endswith("-"),
+            para.update(page=pn, x1=d["x1"], y1=d["y1"], gap=False, end=not re.search(r"\w-$", plain),
+                        punct=bool(re.search(r"[.;:!?»\")]$", plain)),
                         cw=(d["x1"] - d["x0"]) / max(1, len(plain)))    # средняя ширина буквы в этой строке
     flush()
     if not nimg:
