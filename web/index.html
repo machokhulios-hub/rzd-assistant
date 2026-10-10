@@ -2295,7 +2295,8 @@ async function near(s) {   // опечатка: самое частое из п�
   return bd <= lim ? best : null;
 }
 const plural = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? b : c;
-const fileUrl = (doc, page) => `files/${doc.file.split('/').map(encodeURIComponent).join('/')}` + (page && /\.pdf$/i.test(doc.file) ? `#page=${page}` : '');
+const fileUrl = (doc, page) => `files/${doc.file.split('/').map(encodeURIComponent).join('/')}` +   // DOCX и TXT - страница для чтения (файл не скачивается)
+  (/\.pdf$/i.test(doc.file) ? (page ? `#page=${page}` : '') : `.html?v=${META ? META.v : ''}`);
 const docItem = (x, sub) => `<a class="item" href="${fileUrl(x)}" target="_blank" rel="noopener"><span class="badge" style="--c:var(--cyan)">${ic('doc')}</span>
   <span><b>${esc(x.name)}</b><small>${esc(sub)}</small></span><span class="go">${ic('chev')}</span></a>`;
 

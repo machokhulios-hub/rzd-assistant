@@ -1,7 +1,8 @@
-"""Сборка сайта: documents/ (PDF, DOCX, TXT) -> public/ (страница, сами файлы и поисковый индекс).
+"""Сборка сайта: documents/ (PDF, DOCX, TXT) -> public/ (страница, PDF, DOCX и TXT - страницами для чтения, поисковый индекс).
 Сервера у сайта нет: поиск считается в браузере по индексу, собранному здесь.
 Запуск:  python build.py   ->  папка public/ (её и публикуют)."""
 import hashlib
+import html
 import json
 import math
 import re
@@ -162,6 +163,69 @@ def _docx_parts(path: Path, per_part: int = 10) -> list[tuple[str, str]]:
     return parts
 
 
+# ---- страница для чтения: DOCX и TXT открываются на сайте, а не скачиваются
+VIEW_CSS = """:root{color-scheme:light dark;--bg:#fff;--text:#111;--muted:#666;--line:#ddd}
+@media (prefers-color-scheme:dark){:root{--bg:#0b0d12;--text:#e8eaf0;--muted:#9aa0ad;--line:#2a2f3a}}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.55 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:760px;margin:0 auto;padding:20px 16px 60px;overflow-wrap:anywhere}
+p{margin:0 0 .7em}.c{text-align:center}.r{text-align:right}h2{font-size:1.05em;line-height:1.35;margin:1.4em 0 .7em}
+.tbl{overflow-x:auto;margin:0 0 1em}table{border-collapse:collapse;font-size:.9em}td{border:1px solid var(--line);padding:6px 8px;vertical-align:top}"""
+
+
+def _view_html(title: str, body: str) -> str:
+    return (f'<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<title>{html.escape(title)}</title><style>{VIEW_CSS}</style></head><body><main>\n{body}\n</main></body></html>')
+
+
+def _runs_html(p) -> str:
+    out = []
+    for r in p.runs:
+        t = html.escape(r.text).replace("\n", "<br>").replace("\t", " ")
+        if t and r.bold:
+            t = f"<b>{t}</b>"
+        if t and r.italic:
+            t = f"<i>{t}</i>"
+        out.append(t)
+    return "".join(out) or html.escape(p.text)
+
+
+def view_docx(path: Path) -> str:
+    import docx
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+    d, out = docx.Document(path), []
+    for el in d.element.body.iterchildren():
+        if el.tag.endswith("}p"):
+            p = Paragraph(el, d)
+            if not p.text.strip():
+                continue
+            al = str(p.alignment or p.style.paragraph_format.alignment or "")
+            cls = ' class="c"' if "CENTER" in al else ' class="r"' if "RIGHT" in al else ""
+            tag = "h2" if (p.style.name or "").lower().startswith(("heading", "заголовок", "title")) else "p"
+            out.append(f"<{tag}{cls}>{_runs_html(p)}</{tag}>")
+        elif el.tag.endswith("}tbl"):
+            rows = []
+            for r in Table(el, d).rows:
+                cells, seen = [], []
+                for c in r.cells:
+                    if c._tc in seen:          # объединённые ячейки python-docx отдаёт по нескольку раз
+                        continue
+                    seen.append(c._tc)
+                    cells.append("<td>" + "<br>".join(html.escape(x.text) for x in c.paragraphs if x.text.strip()) + "</td>")
+                rows.append("<tr>" + "".join(cells) + "</tr>")
+            out.append('<div class="tbl"><table>' + "".join(rows) + "</table></div>")
+    return "\n".join(out)
+
+
+def view_text(path: Path) -> str:
+    raw = path.read_bytes()
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = raw.decode("cp1251", errors="replace")
+    return "\n".join(f"<p>{html.escape(x)}</p>" for x in text.splitlines() if x.strip())
+
+
 def parts_of(path: Path) -> list:
     """Текст документа; разобранное хранится в .cache, чтобы не читать те же файлы при каждой сборке."""
     hit = CACHE / (hashlib.sha1(path.read_bytes()).hexdigest() + ".json")
@@ -263,7 +327,15 @@ def build():
             shutil.copyfile(f, OUT / f.name)
     for path, d in zip(files, docs):
         (OUT / "files" / d["file"]).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(path, OUT / "files" / d["file"])
+        if path.suffix.lower() == ".pdf":    # PDF браузер показывает сам
+            shutil.copyfile(path, OUT / "files" / d["file"])
+            continue
+        try:                                 # остальное - страницей для чтения, сам файл на сайт не кладём
+            body = view_docx(path) if path.suffix.lower() == ".docx" else view_text(path)
+        except Exception as e:
+            print(f"НЕ ПОКАЗАТЬ: {path.name}: {e}")
+            body = "<p>Документ не удалось показать.</p>"
+        (OUT / "files" / (d["file"] + ".html")).write_text(_view_html(d["name"], body), "utf-8")
     groups = defaultdict(dict)
     for t, v in post.items():
         groups[fnv(t) % shards][t] = v
