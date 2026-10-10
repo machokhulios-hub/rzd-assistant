@@ -293,8 +293,6 @@ button.kv span{min-width:0;overflow-wrap:anywhere}
 .clk small{display:block;color:var(--muted);font-size:13.5px}
 .clk small:first-child{color:var(--text);font-weight:700;font-size:15px}
 .form .three{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.seg.mini{margin-bottom:12px}
-.seg.mini button{padding:8px;font-size:13.5px}
 .laps{margin-top:12px}
 .laps:empty{display:none}
 .lap{display:grid;grid-template-columns:auto 1fr auto;gap:12px;padding:11px 16px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
@@ -582,12 +580,11 @@ html.big{zoom:1.15}
     </div>
 
     <div id="t-timer">
-      <div class="seg mini"><button id="tw-timer" onclick="twMode(0)">Таймер</button><button id="tw-sw" onclick="twMode(1)">Секундомер</button></div>
       <div id="tw-sw-box">
         <div class="card sum" style="text-align:center"><div class="tbig" id="swBig">00:00,00</div><small style="color:var(--muted)" id="swState"></small></div>
         <div class="btns" id="swBtns"></div>
         <div class="card list laps" id="swLaps"></div>
-        <p class="note">Секундомер продолжает идти, если перейти в другой раздел или закрыть страницу.</p>
+        <p class="note">Секундомер продолжает идти, если перейти в другой раздел или закрыть страницу. «Сбросить» возвращает к таймеру.</p>
       </div>
       <div id="tw-timer-box">
       <div class="card sum" style="text-align:center"><div class="tbig" id="tmBig">05:00</div><small style="color:var(--muted)" id="tmState"></small>
@@ -1185,7 +1182,7 @@ if (!TOOLS[TL]) TL = 'calc';
 function toolsMode(m) {
   if (TOOLS[m]) { TL = m; save('toolsMode', {m}); }
   Object.keys(TOOLS).forEach(k => { $('t-' + k).style.display = k === TL ? '' : 'none'; });   // калькулятор, часы и таймер открываются каждый своей кнопкой, без переключателя
-  const [h, sub] = TL === 'timer' && SWT.on ? ['Секундомер', 'Время с точностью до сотых секунды и круги.'] : TOOLS[TL];
+  const [h, sub] = TL === 'timer' && swOn() ? ['Секундомер', 'Время с точностью до сотых секунды и круги.'] : TOOLS[TL];
   $('toolsH').textContent = h; $('toolsSub').textContent = sub;
   if (TL === 'calc') kcRender();
   if (TL === 'timer') twRender();
@@ -1334,9 +1331,10 @@ function tmRender() {
   $('tmWakeBtn').style.display = 'wakeLock' in navigator ? '' : 'none';
   $('tmWakeSw').classList.toggle('on', !!TMR.wake);
   const b = (t, f, cls = 'btn2') => `<button class="${cls}" onclick="${f}()">${t}</button>`;
-  $('tmBtns').innerHTML = {idle: b('Старт', 'tmStart', 'btn'), run: b('Пауза', 'tmPause', 'btn') + b('+1 мин', 'tmAdd') + b('Сбросить', 'tmReset'),
+  const sw = b('Секундомер', 'swStart');
+  $('tmBtns').innerHTML = {idle: b('Старт', 'tmStart', 'btn') + sw, run: b('Пауза', 'tmPause', 'btn') + b('+1 мин', 'tmAdd') + b('Сбросить', 'tmReset'),
     pause: b('Продолжить', 'tmStart', 'btn') + b('+1 мин', 'tmAdd') + b('Сбросить', 'tmReset'),
-    done: (RING ? b('Выключить сигнал', 'stopRing', 'btn') : b('Запустить снова', 'tmStart', 'btn')) + b('Сбросить', 'tmReset')}[st];
+    done: (RING ? b('Выключить сигнал', 'stopRing', 'btn') : b('Запустить снова', 'tmStart', 'btn')) + b('Сбросить', 'tmReset') + (RING ? '' : sw)}[st];
   tmTick();
 }
 function tmTick() {
@@ -1353,18 +1351,18 @@ function tmTile() {
 }
 
 // секундомер: хранит момент запуска и набежавшее до паузы время, поэтому тоже идёт при переходах и перезагрузке
-const SWT = load('stopwatch', {on: 0, start: 0, acc: 0, laps: []});   // on - открыт секундомер, а не таймер; laps - общее время на каждом круге
+const SWT = load('stopwatch', {start: 0, acc: 0, laps: []});   // laps - общее время на каждом круге
 const swTime = () => SWT.acc + (SWT.start ? Date.now() - SWT.start : 0);
 const swFmt = ms => { const c = Math.floor(ms / 10), s = Math.floor(c / 100), h = Math.floor(s / 3600);
   return (h ? h + ':' : '') + p2(Math.floor(s / 60) % 60) + ':' + p2(s % 60) + ',' + p2(c % 100); };
 let SWRAF = 0;
-function twMode(on) { SWT.on = on; save('stopwatch', SWT); toolsMode('timer'); }
+const swOn = () => !!(SWT.start || SWT.acc || SWT.laps.length);   // секундомер запущен или на паузе - экран таймера показывает его
 function twRender() {
-  $('tw-timer').classList.toggle('on', !SWT.on); $('tw-sw').classList.toggle('on', !!SWT.on);
-  $('tw-timer-box').style.display = SWT.on ? 'none' : ''; $('tw-sw-box').style.display = SWT.on ? '' : 'none';
-  if (SWT.on) swRender(); else tmRender();
+  const on = swOn();
+  $('tw-timer-box').style.display = on ? 'none' : ''; $('tw-sw-box').style.display = on ? '' : 'none';
+  if (on) swRender(); else tmRender();
 }
-function swSave() { save('stopwatch', SWT); wakeSet(); swRender(); }
+function swSave() { save('stopwatch', SWT); wakeSet(); if (TL === 'timer') toolsMode('timer'); }
 function swStart() { SWT.start = Date.now(); swSave(); }
 function swPause() { SWT.acc = swTime(); SWT.start = 0; swSave(); }
 function swReset() { Object.assign(SWT, {start: 0, acc: 0, laps: []}); swSave(); }
@@ -1372,13 +1370,13 @@ function swLap() { SWT.laps.push(swTime()); if (SWT.laps.length > 99) SWT.laps.s
 function swRender() {
   const run = !!SWT.start, b = (t, f, cls = 'btn2') => `<button class="${cls}" onclick="${f}()">${t}</button>`;
   $('swBtns').innerHTML = run ? b('Пауза', 'swPause', 'btn') + b('Круг', 'swLap')
-    : swTime() ? b('Продолжить', 'swStart', 'btn') + b('Сбросить', 'swReset') : b('Старт', 'swStart', 'btn');
+    : b('Продолжить', 'swStart', 'btn') + b('Сбросить', 'swReset');
   const L = SWT.laps, d = L.map((t, i) => t - (L[i - 1] || 0)), many = d.length > 2;
   const best = many ? Math.min(...d) : -1, worst = many ? Math.max(...d) : -1;
   $('swLaps').innerHTML = d.map((x, i) => `<div class="lap ${x === best ? 'best' : x === worst ? 'worst' : ''}"><span>Круг ${i + 1}</span><small>${swFmt(L[i])}</small><b>${swFmt(x)}</b></div>`).reverse().join('');
   swTick();
   cancelAnimationFrame(SWRAF);
-  if (run) { const f = () => { if (!SWT.start || TL !== 'timer' || !SWT.on || !$('v-tools').classList.contains('on')) return; swTick(); SWRAF = requestAnimationFrame(f); }; SWRAF = requestAnimationFrame(f); }
+  if (run) { const f = () => { if (!SWT.start || TL !== 'timer' || !$('v-tools').classList.contains('on')) return; swTick(); SWRAF = requestAnimationFrame(f); }; SWRAF = requestAnimationFrame(f); }
 }
 function swTick() {
   const t = swTime();
