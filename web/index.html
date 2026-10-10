@@ -314,6 +314,7 @@ html.big{zoom:1.15}
   <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1h-.2a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3h.1a1.6 1.6 0 0 0 1-1.5v-.2a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v.1a1.6 1.6 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></symbol>
   <symbol id="i-math" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 9h4M9 7v4M13.5 9h4M7.3 14.3l3.4 3.4M10.7 14.3l-3.4 3.4M13.5 14.5h4M13.5 17.5h4"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 2.5v4M16 2.5v4M8 13.5h.01M12 13.5h.01M16 13.5h.01M8 17h.01M12 17h.01"/></symbol>
   <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="8"/><path d="M12 9.5v4l2.5 1.5M9.5 2.5h5M12 2.5v3M19 6.5l1.5-1.5"/></symbol>
 </svg>
 
@@ -343,20 +344,23 @@ html.big{zoom:1.15}
         <button class="card tile" style="--c:var(--cyan)" onclick="go('train')"><span class="badge"><svg><use href="#i-train"/></svg></span><b>Электрички</b><small id="tileTrain">расписание</small></button>
         <button class="card tile" style="--c:var(--blue)" onclick="go('tools','calc')"><span class="badge"><svg><use href="#i-math"/></svg></span><b>Калькулятор</b><small>проценты, история</small></button>
         <button class="card tile" style="--c:var(--amber)" onclick="go('tools','timer')"><span class="badge"><svg><use href="#i-timer"/></svg></span><b>Таймер</b><small id="tileTimer">обратный отсчёт</small></button>
-        <button class="card tile wide" style="--c:var(--violet)" onclick="go('tools','clock')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Часы</b><small id="tileClock">местное и московское время</small></button>
+        <button class="card tile" style="--c:var(--violet)" onclick="go('tools','clock')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Часы</b><small id="tileClock">местное и московское время</small></button>
+        <button class="card tile" style="--c:var(--green)" onclick="go('vac')"><span class="badge"><svg><use href="#i-cal"/></svg></span><b>Отпуск</b><small id="tileVac">дни отпуска и дата выхода</small></button>
       </div>
 
-      <details class="fold" data-fold="vac">
-        <summary>Календарь отпуска <span id="vacSum"></span><svg><use href="#i-chev"/></svg></summary>
-        <div class="card vac sum">
-          <div class="mon"><button onclick="vacMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
-            <b id="vacName"></b><button onclick="vacMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
-          <div class="cal" id="vacGrid"></div>
-          <div id="vacOut"></div>
-        </div>
-        <p class="note">Нерабочие праздничные дни, попавшие в отпуск, в число дней отпуска не входят (статья 120 Трудового кодекса). Переносы выходных по производственному календарю не учитываются.</p>
-      </details>
     </div>
+  </section>
+
+  <!-- Календарь отпуска -->
+  <section class="view" id="v-vac">
+    <h1>Отпуск</h1><p class="sub">Отметьте первый и последний день - посчитаю дни отпуска, праздники и дату выхода.</p>
+    <div class="card vac sum">
+      <div class="mon"><button onclick="vacMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
+        <b id="vacName"></b><button onclick="vacMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
+      <div class="cal" id="vacGrid"></div>
+      <div id="vacOut"></div>
+    </div>
+    <p class="note">Нерабочие праздничные дни, попавшие в отпуск, в число дней отпуска не входят (статья 120 Трудового кодекса). Переносы выходных по производственному календарю не учитываются. Даты хранятся только в этом браузере.</p>
   </section>
 
   <!-- Поиск по документам: результаты сверху, строка поиска внизу, как в чате -->
@@ -636,7 +640,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s || '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const ic = n => `<svg><use href="#i-${n}"/></svg>`;
 
-const NAV = {quiz: 'home', dates: 'home', train: 'home', tools: 'home'};   // страницы без своей кнопки в нижнем меню
+const NAV = {quiz: 'home', dates: 'home', train: 'home', tools: 'home', vac: 'home'};   // страницы без своей кнопки в нижнем меню
 function go(view, arg) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === (NAV[view] || view)));
@@ -652,6 +656,7 @@ function go(view, arg) {
   if (view === 'more') renderMore();
   if (view === 'train') trainRender();
   if (view === 'tools') toolsMode(arg);
+  if (view === 'vac') vacRender();
 }
 
 // ---- учёт часов
@@ -1482,7 +1487,7 @@ function vacClear() { VAC.a = VAC.b = ''; save('vacation', VAC); vacRender(); }
 function vacRender() {
   const y = +VM.slice(0, 4), m = +VM.slice(5, 7) - 1, first = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate(), now = iso(new Date());
   const {a, b} = VAC;
-  $('vacName').textContent = `${MONTHS[m]} ${y}`; $('vacSum').textContent = '';
+  $('vacName').textContent = `${MONTHS[m]} ${y}`; $('tileVac').textContent = 'дни отпуска и дата выхода';
   let h = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(w => `<i>${w}</i>`).join('') + '<span></span>'.repeat(first);
   for (let d = 1; d <= n; d++) {
     const s = `${VM}-${p2(d)}`, cls = [(first + d - 1) % 7 > 4 && 'we', HOLIDAYS.includes(s.slice(5)) && 'hol', s === now && 'now',
@@ -1500,7 +1505,7 @@ function vacRender() {
     <div class="stats" style="margin-top:14px"><div><small>Праздничных</small><b>${hol}</b></div><div><small>В счёт отпуска</small><b>${days - hol} ${word(days - hol)}</b></div>
       <div><small>Выход</small><b>${dmy(back).slice(0, 5)}</b></div></div>
     <button class="linkbtn" style="margin-top:14px" onclick="vacClear()">Очистить даты</button>`;
-  $('vacSum').textContent = `· ${days} ${word(days)}`;
+  $('tileVac').textContent = `${days} ${word(days)} · с ${dmy(a).slice(0, 5)}`;
 }
 
 // ---- слова и их основы. Стеммер и разбор слов повторяют build.py - они должны совпадать буква в букву.
