@@ -221,6 +221,7 @@ nav button.on{color:var(--text)}nav button.on svg{color:var(--red)}
 .field{align-items:center}
 .field input{flex:1;min-width:0;height:44px;background:none;border:0;outline:0;-webkit-appearance:none;appearance:none}
 .field input::-webkit-search-cancel-button{display:none}
+a.doclink[href]{color:var(--blue);font-weight:700;text-decoration:none}
 .found{margin-top:0}
 .dock{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:29;padding:10px 0;display:none;
   background:var(--glass);backdrop-filter:blur(16px);border-top:1px solid var(--line)}
@@ -551,6 +552,7 @@ html.big{zoom:1.15}
       </div>
       <h2>Итог</h2>
       <div id="shOut"></div>
+      <p class="note">Открыть: <a class="doclink" data-doc="bash">таблицу «Порядка» для башмаков</a> · <a class="doclink" data-doc="151" data-p="78">таблицу III.4 Правил № 151</a> · <a class="doclink" data-doc="151" data-p="60">режимы воздухораспределителей, п. 14</a>.</p>
       <p class="note">По «Порядку определения потребного количества тормозных башмаков для закрепления поезда на перегоне» (есть в документах, раздел «Тормоза»): тормозные оси = вес поезда / 100 × коэффициент уклона; в гружёном поезде один башмак заменяет 3 оси, в порожнем - 1 ось. Коэффициенты для порожнего поезда на уклонах до 7 тысячных (0,4 и 0,5) взяты из таблицы этого документа. Результат округляю вверх; в двух строках таблицы (4600 и 5600 тс, уклон до 8) напечатано на один башмак меньше. Гружёный или порожний состав определяю по нагрузке на ось, как в таблице III.4 Правил эксплуатации тормозов № 151: 10 тс и более - гружёный. Уклоны круче 20 до 40 тысячных - по той же таблице III.4 (башмаков на 100 тс веса). Сверяйте с таблицей и местной инструкцией.</p>
     </div>
 
@@ -584,6 +586,7 @@ html.big{zoom:1.15}
 
     <h2>В бланк</h2>
     <div class="card" id="vuBlank"></div>
+    <p class="note">Открыть в Правилах эксплуатации тормозов № 151: <a class="doclink" data-doc="151" data-p="64">нормы нажатия, таблица III.1</a> · <a class="doclink" data-doc="151" data-p="74">нажатие на ось, таблица III.3</a> · <a class="doclink" data-doc="151" data-p="78">ручные тормоза, таблица III.4</a> · <a class="doclink" data-doc="151" data-p="90">бланк ВУ-45</a>.</p>
     <p class="note">Нормы - из «Норм обеспечения поездов тормозами» (приложение 2 к Правилам эксплуатации тормозов, текст с сайта Минтранса): единое наименьшее нажатие - таблица 1, допускаемое минимальное - таблица 2, нажатие на ось - таблицы 3 и 4, ручные тормоза - таблица 8. В грузовых поездах вес и тормоза локомотива не учитываются (п. 6.3). Нажатие на ось сверено с таблицей III.3 и бланком ВУ-45 Правил эксплуатации тормозов № 151 (ред. от 01.01.2025). Требуемое нажатие округляю вверх до целой тонны. Сверяйте с действующей редакцией Правил и местными инструкциями вашей дороги.</p>
     </div>
   </section>
@@ -2094,24 +2097,50 @@ if (vv) { vv.addEventListener('resize', dockPos); vv.addEventListener('scroll', 
 const DIR_C = ['blue', 'cyan', 'green', 'amber', 'violet', 'red'];
 const secName = x => x.replace(/^\d+(?:\.\d+)*\.?\s+/, '');   // номер в начале названия папки задаёт только порядок, на сайте его не видно
 const dirSecs = () => !META ? [] : META.secs || [...new Set(META.docs.map(x => x.sec).filter(Boolean))];
+// документы, на которые опираются расчёты: какие расчёты и какие страницы открывать
+const DOC_USE = [
+  {key: '151', title: 'Правила эксплуатации тормозов № 151', re: /ТОРМОЗОВ_№151/i, uses: [['vu', 'ВУ-45'], ['shoe', 'Башмаки']],
+   pages: [[60, 'Режимы включения воздухораспределителей, п. 14'], [64, 'Нормы тормозного нажатия, таблица III.1'], [74, 'Нажатие колодок на ось, таблица III.3'],
+     [78, 'Ручные тормоза и башмаки, таблица III.4'], [90, 'Бланк справки ВУ-45']]},
+  {key: 'bash', title: 'Порядок: тормозные башмаки', re: /Порядок_определения_потребного_количества_тормозных_башмаков/i, uses: [['shoe', 'Башмаки']], pages: []}];
+const DIR_HINT = {'Нестандартные ситуации 2580р': 'Сюда - распоряжение 2580р о действиях в нестандартных ситуациях. Когда оно появится, «Билеты» будут брать ответы из него.'};
+const docUse = x => DOC_USE.find(u => u.re.test(x.file));
+function docMeta(x) {   // номер и дата документа - из названия файла
+  const n = /№\s*([0-9]+[а-яa-z]*)/i.exec(x.name) || /(?:^|\s)()(Ц[А-Я]{1,3})[ -]?(\d+)\s*р(?=\s|$)/i.exec(x.name), d = /(\d{2})[ ._](\d{2})[ ._](\d{4})/.exec(x.name), red = /ред/i.test(x.name);
+  return [n && (n[2] ? `№ ${n[2]}-${n[3]}р` : `№ ${n[1]}`), d && `${red ? 'ред. от' : 'от'} ${d[1]}.${d[2]}.${d[3]}`].filter(Boolean).join(' ');
+}
+function linkDocs() {   // ссылки из расчётов на страницы документов - когда список документов загружен
+  document.querySelectorAll('a.doclink').forEach(a => {
+    const u = DOC_USE.find(u => u.key === a.dataset.doc), doc = META && u && META.docs.find(x => u.re.test(x.file));
+    if (doc) { a.href = fileUrl(doc, a.dataset.p); a.target = '_blank'; a.rel = 'noopener'; } else a.removeAttribute('href');
+  });
+}
+function dirFind(sec, q) { q = q.trim(); if (!q) return; SEC = sec; go('search'); find(q); }
 function renderDocs(sec) {
   const d = META ? META.docs : [], secs = dirSecs(), inDir = sec !== undefined && secs.includes(sec);
-  const sub = x => !x.chunks ? 'без текста - поиск по этому файлу не работает' : /\.pdf$/i.test(x.file) ? `${x.parts} стр.` : x.file.split('.').pop().toUpperCase();
+  const sub = x => [docMeta(x), !x.chunks ? 'без текста - поиск по этому файлу не работает' : /\.pdf$/i.test(x.file) ? `${x.parts} стр.` : x.file.split('.').pop().toUpperCase()].filter(Boolean).join(' · ');
   const files = n => `${n} ${plural(n, 'файл', 'файла', 'файлов')}`;
   $('docsH').textContent = inDir ? secName(sec) : 'Документы';
   if (!META) { $('docsSub').textContent = 'Файлы открываются целиком.'; $('docs').innerHTML = '<div class="card empty">Список документов не загрузился. Обновите страницу.</div>'; return; }
   if (inDir) {
     const own = d.filter(x => x.sec === sec);
     $('docsSub').textContent = own.length ? files(own.length) : 'Папка пока пустая.';
+    const hint = DIR_HINT[secName(sec)];
     $('docs').innerHTML = `<button class="back" onclick="dirBack()">${ic('chev')}Все папки</button>` +
-      (own.length ? `<div class="card list">${own.map(x => docItem(x, sub(x))).join('')}</div>` : '<div class="card empty">Материалы сюда ещё не добавлены.</div>');
+      (own.some(x => x.chunks) ? `<form class="field" style="margin-bottom:12px" onsubmit="event.preventDefault();dirFind(this.dataset.s,this.q.value)" data-s="${esc(sec)}">
+        <input name="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="Искать в этой папке" aria-label="Поиск в папке">
+        <button class="send" aria-label="Найти">${ic('search')}</button></form>` : '') +
+      (own.length ? `<div class="card list">${own.map(x => docItem(x, sub(x))).join('')}</div>` : `<div class="card empty">${hint ? esc(hint) : 'Материалы сюда ещё не добавлены.'}</div>`) +
+      own.map(x => { const u = docUse(x); if (!u) return ''; return `<h2>${esc(u.title)}</h2>
+        <div class="card list">${u.uses.map(([m, t]) => `<button class="item" onclick="go('calc','${m}')"><span class="badge" style="--c:var(--amber)">${ic('calc')}</span><span><b>${t}</b><small>расчёт по этому документу</small></span><span class="go">${ic('chev')}</span></button>`).join('')}
+        ${u.pages.map(([pg, t]) => `<a class="item dir" href="${fileUrl(x, pg)}" target="_blank" rel="noopener"><span class="badge" style="--c:var(--cyan)">${ic('doc')}</span><span><b>${t}</b><small>стр. ${pg}</small></span><span class="go">${ic('chev')}</span></a>`).join('')}</div>`; }).join('');
     return;
   }
   $('docsSub').textContent = `${secs.length} ${plural(secs.length, 'папка', 'папки', 'папок')} · ${files(d.length)} · обновлено ${META.built}`;
   const loose = d.filter(x => !x.sec), tiles = UI.dirs === 'tiles';   // loose - файлы прямо в documents/, без папки
   const dirs = secs.map((x, i) => {
     const n = d.filter(y => y.sec === x).length;
-    const badge = `<span class="badge">${ic('folder')}</span>`, name = esc(secName(x)), note = n ? files(n) : 'пусто';
+    const badge = `<span class="badge">${ic('folder')}</span>`, name = esc(secName(x)), note = n ? files(n) : DIR_HINT[secName(x)] ? 'пусто - нужен документ' : 'пусто';
     const at = `style="--c:var(--${DIR_C[i % DIR_C.length]})" data-s="${esc(x)}" onclick="go('docs',this.dataset.s)"`;
     return tiles ? `<button class="card tile dir" ${at}>${badge}<b>${name}</b><small>${note}</small></button>`
       : `<button class="item dir" ${at}>${badge}<span><b>${name}</b><small>${note}</small></span><span class="go">${ic('chev')}</span></button>`;
@@ -2346,6 +2375,7 @@ async function accLogout() {
   $('tileDocs').textContent = dn ? `${dn} ${plural(dn, 'папка', 'папки', 'папок')} · ${n} ${plural(n, 'файл', 'файла', 'файлов')}` : n ? `${n} ${plural(n, 'файл', 'файла', 'файлов')}` : 'пока пусто';
   marksMoved();
   if (VIEW === 'docs') renderDocs();
+  linkDocs();
   renderMore();
   if (UI.offline && UI.offline !== META.v) offlineAll();   // сайт пересобран: обновляем скачанное для работы без сети
   const fromHash = () => {   // ссылкой на поиск можно поделиться: адрес хранит запрос
