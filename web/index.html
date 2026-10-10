@@ -359,7 +359,7 @@ html.big{zoom:1.15}
   <symbol id="i-test" viewBox="0 0 24 24"><rect x="4.5" y="3" width="15" height="18.5" rx="2.5"/><path d="m8 8.5 1.5 1.5 2.5-3M14 8.5h2.5M8 15l1.5 1.5 2.5-3M14 15h2.5"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/></symbol>
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11 12 3.5l8.5 7.5V20a1.5 1.5 0 0 1-1.5 1.5h-4.5v-6h-5v6H5A1.5 1.5 0 0 1 3.5 20z"/></symbol>
-  <symbol id="i-news" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M7.5 9h5M7.5 12.5h9M7.5 16h9"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.5 2.5 5 13.5h6.5l-1 8 8.5-11h-6.5z"/></symbol>
   <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></symbol>
   <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
@@ -398,7 +398,7 @@ html.big{zoom:1.15}
       <h2>Разделы</h2>
       <div class="tiles">
         <!-- два столбца: плитки идут парами слева направо -->
-        <button class="card tile" style="--c:var(--red)" onclick="go('soon','news')"><span class="badge"><svg><use href="#i-news"/></svg></span><b>Новости РЖД</b><small>раздел готовится</small></button>
+        <button class="card tile" style="--c:var(--red)" onclick="go('energy')"><span class="badge"><svg><use href="#i-bolt"/></svg></span><b style="white-space:normal">Электро&shy;энергия</b><small id="tileEnergy">расход и рекуперация</small></button>
         <button class="card tile" style="--c:var(--cyan)" onclick="go('train')"><span class="badge"><svg><use href="#i-train"/></svg></span><b>Электрички</b><small id="tileTrain">расписание</small></button>
         <button class="card tile" style="--c:var(--green)" onclick="go('soon','phones')"><span class="badge"><svg><use href="#i-phone"/></svg></span><b>Телефоны</b><small>раздел готовится</small></button>
         <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><b>Документы</b><small id="tileDocs">все файлы по разделам</small></button>
@@ -415,7 +415,18 @@ html.big{zoom:1.15}
     </div>
   </section>
 
-  <!-- Разделы, которые ещё не готовы: Новости РЖД, Телефоны, Тесты -->
+  <!-- Электроэнергия: счётчики секций из поездок в Учёте часов -->
+  <section class="view" id="v-energy">
+    <h1>Электроэнергия</h1><p class="sub">Расход и рекуперация по счётчикам секций - из поездок в Учёте часов.</p>
+    <div class="mon"><button onclick="enMonth(-1)" aria-label="Предыдущий месяц"><svg style="transform:rotate(180deg)"><use href="#i-chev"/></svg></button>
+      <b id="enName"></b><button onclick="enMonth(1)" aria-label="Следующий месяц"><svg><use href="#i-chev"/></svg></button></div>
+    <div id="enSum"></div>
+    <button class="btn" style="margin-top:14px" id="enAdd" onclick="enWrite()">Записать показания</button>
+    <h2>Поездки со счётчиками</h2>
+    <div id="enTrips"></div>
+  </section>
+
+  <!-- Разделы, которые ещё не готовы: Телефоны, Тесты -->
   <section class="view" id="v-soon">
     <h1 id="soonH"></h1><p class="sub" id="soonSub"></p>
     <div class="card empty">Раздел готовится. Материалы появятся позже.</div>
@@ -786,7 +797,7 @@ const ic = n => `<svg><use href="#i-${n}"/></svg>`;
 
 let TG = null;   // Telegram.WebApp, когда страница открыта как Mini App в Telegram
 
-const NAV = {quiz: 'home', dates: 'more', train: 'home', tools: 'home', vac: 'more', soon: 'home'};   // страницы без своей кнопки в нижнем меню
+const NAV = {energy: 'hours', quiz: 'home', dates: 'more', train: 'home', tools: 'home', vac: 'more', soon: 'home'};   // страницы без своей кнопки в нижнем меню
 let VIEW = 'home', BACK = [];   // BACK - пройденные разделы для кнопки «Назад» в Telegram
 function go(view, arg, back) {
   if (view === 'home') { BACK = []; homeNow(); }
@@ -809,10 +820,11 @@ function go(view, arg, back) {
   if (view === 'tools') toolsMode(arg);
   if (view === 'vac') vacRender();
   if (view === 'soon') soonRender(arg);
+  if (view === 'energy') enRender();
 }
 
-const SOON = {news: ['Новости РЖД', 'Новости компании и дороги.'], phones: ['Телефоны', 'Справочник нужных номеров.'], tests: ['Тесты', 'Проверка знаний.']};
-function soonRender(k) { const [h, sub] = SOON[k] || SOON.news; $('soonH').textContent = h; $('soonSub').textContent = sub; }
+const SOON = {phones: ['Телефоны', 'Справочник нужных номеров.'], tests: ['Тесты', 'Проверка знаний.']};
+function soonRender(k) { const [h, sub] = SOON[k] || SOON.phones; $('soonH').textContent = h; $('soonSub').textContent = sub; }
 
 // ---- учёт часов
 const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
@@ -970,6 +982,38 @@ function monthEnergy(ym) {   // поездка целиком относится
   let use = 0, rec = 0, n = 0;
   HRS.shifts.forEach(x => { const e = x.start.slice(0, 7) === ym && energy(x); if (e) { use += e.use || 0; rec += e.rec || 0; n++; } });
   return n ? {use, rec, n} : null;
+}
+// ---- раздел «Электроэнергия»: итог месяца и поездки с показаниями по секциям; месяц - общий с Учётом часов
+function enMonth(k) { shiftMonth(k); enRender(); }
+function enRender() {
+  const en = monthEnergy(YM), [y, m] = YM.split('-');
+  $('enName').textContent = `${MONTHS[+m - 1]} ${y}`;
+  $('enSum').innerHTML = en ? `<div class="card sum"><div class="big">${kwh(en.use)} <small>расход</small></div>
+    <div class="stats"><div><small>Рекуперация</small><b>${kwh(en.rec)}</b></div><div><small>От расхода</small><b>${en.use ? ru(Math.round(en.rec / en.use * 1000) / 10) + ' %' : '-'}</b></div>
+      <div><small>Поездок</small><b>${en.n}</b></div></div>
+    <div class="normf">В среднем за поездку: расход ${kwh(Math.round(en.use / en.n))}, рекуперация ${kwh(Math.round(en.rec / en.n))}</div></div>`
+    : `<div class="card empty">В этом месяце показаний счётчиков пока нет.</div>`;
+  const open = enOpen();
+  $('enAdd').textContent = open && meters(open).length ? 'Дописать показания при сдаче' : 'Записать показания';
+  const list = HRS.shifts.filter(x => x.start.slice(0, 7) === YM && meters(x).length).sort((p, q) => p.start < q.start ? 1 : -1);
+  const pair = (a, b) => diff(a, b) !== null ? `${ru(diff(a, b))}` : b ? '-' : a ? `${esc(a)} → …` : '-';
+  $('enTrips').innerHTML = list.length ? `<div class="card">` + list.map(x => {
+    const e = energy(x) || {}, ms = meters(x);
+    return `<div class="trip"><div><div class="when">${dt(x.start)}${x.end ? ' → ' + dt(x.end) : ' → …'}</div>
+      <b>${e.use != null ? kwh(e.use) : 'нет показаний при сдаче'}</b>
+      <small class="info">${[x.train && `поезд № ${esc(x.train)}`, esc(x.loco), `${ms.length} ${plural(ms.length, 'секция', 'секции', 'секций')}`].filter(Boolean).join(' · ')}</small>
+      ${e.rec != null ? `<small>рекуперация ${kwh(e.rec)}${e.use ? ` (${ru(Math.round(e.rec / e.use * 1000) / 10)} %)` : ''}</small>` : ''}
+      ${ms.length > 1 ? ms.map((s, i) => `<small>секция ${i + 1}: расход ${pair(s.e1, s.e2)} · рекуперация ${pair(s.r1, s.r2)}</small>`).join('') : ''}</div>
+      <span class="acts"><button class="x" onclick="enEdit(${x.id})" aria-label="Изменить показания">✎</button></span></div>`;
+  }).join('') + `</div>` : `<div class="card empty">Показания записываются в поездке: Учёт часов → «Счётчики электроэнергии».</div>`;
+}
+function enEdit(id) { go('hours'); editShift(id); toggleEn(true); $('enSw').scrollIntoView({block: 'start'}); }
+// последняя поездка, куда показания ещё дописывают: не завершена или нет показаний при сдаче
+const enOpen = () => HRS.shifts.filter(x => !x.end || meters(x).some(s => s.e1 && !s.e2 || s.r1 && !s.r2)).sort((p, q) => p.start < q.start ? 1 : -1)[0];
+function enWrite() {
+  const open = enOpen();
+  if (open) return enEdit(open.id);
+  go('hours'); editShift(0); toggleEn(true); $('tripTitle').scrollIntoView({block: 'start'});
 }
 
 // ---- выгрузка поездок месяца в таблицу (CSV для Excel: разделитель - точка с запятой, дробная часть - через запятую)
@@ -1756,6 +1800,8 @@ function homeNow() {
   }
   $('nowList').innerHTML = rows.join(''); $('nowBox').hidden = !rows.length;
   // подписи плиток - по данным разделов
+  const en = monthEnergy(iso(now).slice(0, 7));
+  $('tileEnergy').textContent = en ? `${MONTHS[now.getMonth()].toLowerCase()}: ${kwh(en.use)}` : 'расход и рекуперация';
   const w = num(VU.w);
   if (w) { const v = vuTotals(); $('tileVu').textContent = v.fact ? `${ru(v.fact)} из ${ru(v.need)} тс` + (v.fact >= v.need ? ' - обеспечен' : ' - не хватает') : `${ru(w)} тс, нужно ${ru(v.need)} тс`; }
   if (num(SH.w)) $('tileShoe').textContent = `${ru(num(SH.w))} тс` + (String(SH.i).trim() !== '' ? `, уклон ${SH.i} ‰` : '');
