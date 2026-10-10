@@ -597,10 +597,20 @@ html.big{zoom:1.15}
 
     <div id="t-calc">
       <div class="card kcd"><div class="e" id="kcE">0</div><div class="r" id="kcR"></div></div>
+      <div class="chips" id="kcSub"></div>
       <div class="keys" id="kcKeys"></div>
+      <h2>Перевод единиц</h2>
+      <div class="card form">
+        <div class="two keep">
+          <label>Значение<input class="inp" id="kcuV" inputmode="decimal" placeholder="например, 5,2" oninput="kcUnit()"></label>
+          <label>Что перевести<select class="inp" id="kcuK" onchange="kcUnit()"><option value="kgf">кгс/см² → МПа</option><option value="mpa">МПа → кгс/см²</option>
+            <option value="kmh">км/ч → м/с</option><option value="ms">м/с → км/ч</option><option value="ts">тс → кН</option><option value="kn">кН → тс</option></select></label>
+        </div>
+        <div class="pre" id="kcuOut"></div>
+      </div>
       <h2>История <a onclick="kcClear()">очистить</a></h2>
       <div id="kcHist"></div>
-      <p class="note">Нажмите на строку истории, чтобы подставить результат. «200 + 10 %» - это 200 плюс 10 % от 200. С клавиатуры компьютера тоже работает: цифры, + − * /, Enter, Backspace, Esc.</p>
+      <p class="note">Кнопки над клавиатурой подставляют числа из других разделов: вес, оси и нажатие из справки ВУ-45, часы за месяц из «Учёта часов», вес из «Башмаков». Давление: точно 1 кгс/см² = 0,0980665 МПа, а в Правилах эксплуатации тормозов № 151 принято 1 кгс/см² ≈ 0,1 МПа (например, 0,5 МПа - 5,0 кгс/см²); сила: 1 тс = 9,80665 кН. Нажмите на строку истории, чтобы подставить результат. «200 + 10 %» - это 200 плюс 10 % от 200. С клавиатуры компьютера тоже работает: цифры, + − * /, Enter, Backspace, Esc.</p>
     </div>
 
     <div id="t-clock">
@@ -1305,7 +1315,7 @@ function shCalc() {
 }
 
 // ---- инструменты: калькулятор, часы, таймер
-const TOOLS = {calc: ['Калькулятор', 'Сложение, вычитание, умножение, деление и проценты.'],
+const TOOLS = {calc: ['Калькулятор', 'Действия с числами и процентами, числа из расчётов, перевод единиц.'],
   clock: ['Часы', 'Местное и московское время, ночное время, текущая поездка.'], timer: ['Таймер', 'Обратный отсчёт со звуковым сигналом.']};
 let TL = load('toolsMode', {m: 'calc'}).m;
 if (!TOOLS[TL]) TL = 'calc';
@@ -1314,7 +1324,7 @@ function toolsMode(m) {
   Object.keys(TOOLS).forEach(k => { $('t-' + k).style.display = k === TL ? '' : 'none'; });   // калькулятор, часы и таймер открываются каждый своей кнопкой, без переключателя
   const [h, sub] = TL === 'timer' && swOn() ? ['Секундомер', 'Время с точностью до сотых секунды и круги.'] : TOOLS[TL];
   $('toolsH').textContent = h; $('toolsSub').textContent = sub;
-  if (TL === 'calc') kcRender();
+  if (TL === 'calc') { kcRender(); kcSubs(); kcUnit(); }
   if (TL === 'timer') twRender();
   if (TL === 'clock') {   // поездка - по свежим данным; в переводе времени - текущее время
     $('clkTrip').dataset.k = '';
@@ -1398,6 +1408,33 @@ function kcUse(i) {   // результат из истории: после зн
   kcDone = false; kcErr = ''; save('calcPad', KC); kcRender(); window.scrollTo(0, 0);
 }
 function kcClear() { KC.h = []; save('calcPad', KC); kcRender(); }
+function kcPut(v) {   // число из другого раздела: после знака действия - дописать, иначе - начать с него
+  v = String(v);
+  KC.e = !kcDone && /[-+*/]$/.test(KC.e) ? KC.e + v : v;
+  kcDone = false; kcErr = ''; save('calcPad', KC); kcRender();
+}
+function vuTotals() {   // фактическое и требуемое нажатие справки ВУ-45 - как в самой справке
+  const c = vuCat(), m = vuMain(), total = Math.floor(num(VU.ax));
+  const manual = VU_P.reduce((a, p) => a + (p === m ? 0 : Math.floor(num(VU.n[p]))), 0), auto = m ? Math.max(0, total - manual) : 0;
+  const fact = VU_P.reduce((a, p) => a + (p === m ? auto : Math.floor(num(VU.n[p]))) * p, 0), wAll = num(VU.w) + (VU.loco ? num(VU.lw) : 0);
+  return {fact: Math.round(fact * 100) / 100, need: wAll ? up(wAll * c.norm / 100) : 0};
+}
+function kcSubs() {   // кнопки с числами из других разделов
+  const out = [], add = (t, v) => { v = +v; if (v > 0 && !out.some(x => x[1] === v && x[0] === t)) out.push([t, v]); };
+  const w = num(VU.w), ax = Math.floor(num(VU.ax));
+  if (w) { const vt = vuTotals(); add('Вес ВУ-45', w); add('Осей', ax); add('Нажатие факт.', vt.fact); add('Нажатие треб.', vt.need); }
+  if (num(SH.w) && num(SH.w) !== w) add('Вес, башмаки', num(SH.w));
+  try { const r = hoursData(YM), mw = r.items.reduce((a, x) => a + x.month_work, 0); if (mw) { add('Часов за месяц', Math.round(mw / 60 * 100) / 100); add('Норма месяца', r.norm); } } catch (e) {}
+  $('kcSub').innerHTML = out.map(([t, v]) => `<button class="chip" onclick="kcPut('${kcNum(v)}')">${t}: <b>${kcShow(kcNum(v))}</b></button>`).join('');
+}
+function kcUnit() {   // перевод единиц
+  const v = parseFloat(String($('kcuV').value).replace(',', '.').replace(/\s/g, '')), k = $('kcuK').value;
+  if (!isFinite(v)) { $('kcuOut').innerHTML = ''; return; }
+  const f = x => kcShow(kcNum(+x.toPrecision(6))), put = x => `<button class="linkbtn" onclick="kcPut('${kcNum(+x.toPrecision(6))}');window.scrollTo(0,0)">в калькулятор</button>`;
+  const r = {kgf: [v * .0980665, 'МПа', v / 10, 'по Правилам № 151'], mpa: [v / .0980665, 'кгс/см²', v * 10, 'по Правилам № 151'], kmh: [v / 3.6, 'м/с'], ms: [v * 3.6, 'км/ч'],
+    ts: [v * 9.80665, 'кН'], kn: [v / 9.80665, 'тс']}[k];
+  $('kcuOut').innerHTML = `<b>${f(r[0])} ${r[1]}</b> ${put(r[0])}` + (r[2] !== undefined ? `<br>${r[3]}: <b>${f(r[2])} ${r[1]}</b> ${put(r[2])}` : '');
+}
 function kcRender() {
   const big = kcShow(KC.e) || '0', el = $('kcE');
   el.textContent = big; el.style.fontSize = big.length > 18 ? '24px' : big.length > 12 ? '30px' : '';
