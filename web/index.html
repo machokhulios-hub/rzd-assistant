@@ -251,6 +251,31 @@ a.item{color:inherit;text-decoration:none}
 .linkbtn{color:var(--blue);font-weight:700;font-size:13px}
 .qz .linkbtn{margin-left:auto}
 
+/* инструменты: калькулятор, часы, таймер */
+.kcd{padding:16px;text-align:right}
+.kcd .e{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;min-height:1.15em}
+.kcd .r{color:var(--muted);font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;min-height:1.45em;margin-top:4px;overflow-wrap:anywhere}
+.kcd .r.bad{color:var(--red)}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.keys button{height:58px;border-radius:16px;background:var(--card);border:1px solid var(--line);font-size:23px;font-weight:700;touch-action:manipulation}
+.keys button:active{transform:scale(.96)}
+.keys .fn{color:var(--muted);font-size:19px}
+.keys .op{color:var(--red);background:color-mix(in srgb,var(--red) 10%,var(--card))}
+.keys .eq{background:var(--brand);border-color:var(--brand);color:#fff}
+button.kv{width:100%;text-align:left}
+button.kv span{min-width:0;overflow-wrap:anywhere}
+.tbig{font-size:64px;font-weight:800;letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums;text-align:center;margin:6px 0}
+.clk{padding:20px 16px;text-align:center}
+.clk small{display:block;color:var(--muted);font-size:13.5px}
+.clk small:first-child{color:var(--text);font-weight:700;font-size:15px}
+.form .three{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.btns{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px;margin-top:12px}
+.btn2{height:48px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-weight:800}
+.alarm{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:31;display:none;padding:10px 0;background:var(--brand);color:#fff}
+.alarm.on{display:block}
+.alarm .wrap{display:flex;align-items:center;gap:12px;font-weight:800}
+.alarm button{margin-left:auto;padding:9px 14px;border-radius:12px;background:rgba(255,255,255,.2);font-weight:800}
+
 /* светлая тема и крупный шрифт */
 html.light{--bg:#f4f5f7;--card:#fff;--card2:#eef0f3;--line:#d9dde3;--text:#14171c;--muted:#5d6672;--red:#d92b2b;--blue:#1a6fd6;--amber:#a86500;
   --violet:#6d4fd6;--green:#0f9d6b;--cyan:#0b8f9a;--glass:rgba(244,245,247,.92)}
@@ -288,6 +313,8 @@ html.big{zoom:1.15}
   <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.300"/><circle cx="19" cy="12" r="1.300"/></symbol>
   <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1h-.2a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3h.1a1.6 1.6 0 0 0 1-1.5v-.2a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8v.1a1.6 1.6 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></symbol>
+  <symbol id="i-math" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M7 9h4M9 7v4M13.5 9h4M7.3 14.3l3.4 3.4M10.7 14.3l-3.4 3.4M13.5 14.5h4M13.5 17.5h4"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="8"/><path d="M12 9.5v4l2.5 1.5M9.5 2.5h5M12 2.5v3M19 6.5l1.5-1.5"/></symbol>
 </svg>
 
 <div class="stripe"></div>
@@ -314,6 +341,9 @@ html.big{zoom:1.15}
         <button class="card tile" style="--c:var(--violet)" onclick="go('quiz')"><span class="badge"><svg><use href="#i-q"/></svg></span><b>Билеты</b><small id="tileQuiz">нестандартные ситуации</small></button>
         <button class="card tile" style="--c:var(--green)" onclick="go('dates')"><span class="badge"><svg><use href="#i-bell"/></svg></span><b>Сроки</b><small id="tileDates">медкомиссия, экзамены</small></button>
         <button class="card tile" style="--c:var(--cyan)" onclick="go('train')"><span class="badge"><svg><use href="#i-train"/></svg></span><b>Электрички</b><small id="tileTrain">расписание</small></button>
+        <button class="card tile" style="--c:var(--blue)" onclick="go('tools','calc')"><span class="badge"><svg><use href="#i-math"/></svg></span><b>Калькулятор</b><small>проценты, история</small></button>
+        <button class="card tile" style="--c:var(--amber)" onclick="go('tools','timer')"><span class="badge"><svg><use href="#i-timer"/></svg></span><b>Таймер</b><small id="tileTimer">обратный отсчёт</small></button>
+        <button class="card tile wide" style="--c:var(--violet)" onclick="go('tools','clock')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Часы</b><small id="tileClock">местное и московское время</small></button>
       </div>
 
       <details class="fold" data-fold="vac">
@@ -479,6 +509,47 @@ html.big{zoom:1.15}
     </div>
   </section>
 
+  <!-- Инструменты: калькулятор, часы, таймер -->
+  <section class="view" id="v-tools">
+    <h1 id="toolsH">Калькулятор</h1><p class="sub" id="toolsSub"></p>
+    <div class="seg"><button id="tl-calc" onclick="toolsMode('calc')">Калькулятор</button><button id="tl-clock" onclick="toolsMode('clock')">Часы</button><button id="tl-timer" onclick="toolsMode('timer')">Таймер</button></div>
+
+    <div id="t-calc">
+      <div class="card kcd"><div class="e" id="kcE">0</div><div class="r" id="kcR"></div></div>
+      <div class="keys" id="kcKeys"></div>
+      <h2>История <a onclick="kcClear()">очистить</a></h2>
+      <div id="kcHist"></div>
+      <p class="note">Нажмите на строку истории, чтобы подставить результат. «200 + 10 %» - это 200 плюс 10 % от 200. С клавиатуры компьютера тоже работает: цифры, + − * /, Enter, Backspace, Esc.</p>
+    </div>
+
+    <div id="t-clock">
+      <div class="card clk"><small id="clkDate"></small><div class="tbig" id="clkTime">--:--:--</div><small id="clkZone">местное время</small></div>
+      <div class="card list" style="margin-top:12px">
+        <div class="kv"><span>Московское время</span><b id="clkMsk"></b></div>
+        <div class="kv"><span>Разница с Москвой</span><b id="clkDiff"></b></div>
+        <div class="kv"><span>Всемирное время (UTC)</span><b id="clkUtc"></b></div>
+      </div>
+      <p class="note">Время берётся с часов телефона. Москва - UTC+3 круглый год, перехода на летнее время нет.</p>
+    </div>
+
+    <div id="t-timer">
+      <div class="card sum" style="text-align:center"><div class="tbig" id="tmBig">05:00</div><small style="color:var(--muted)" id="tmState"></small>
+        <div class="prog" style="margin-bottom:0"><i id="tmBar"></i></div></div>
+      <div class="btns" id="tmBtns"></div>
+      <div class="chips" id="tmPre"></div>
+      <div class="card form" id="tmSetBox" style="margin-top:12px">
+        <div class="three">
+          <label>Часы<input class="inp" id="tmH" inputmode="numeric" maxlength="2" placeholder="0" oninput="tmSet('h',this.value)"></label>
+          <label>Минуты<input class="inp" id="tmM" inputmode="numeric" maxlength="3" placeholder="0" oninput="tmSet('m',this.value)"></label>
+          <label>Секунды<input class="inp" id="tmS" inputmode="numeric" maxlength="3" placeholder="0" oninput="tmSet('s',this.value)"></label>
+        </div>
+        <div class="err" id="tmErr"></div>
+        <button type="button" class="tog" id="tmWakeBtn" onclick="tmSet('wake',!TMR.wake)"><span class="sw" id="tmWakeSw"></span>Не гасить экран, пока идёт таймер</button>
+      </div>
+      <p class="note">Таймер продолжает идти, если перейти в другой раздел или закрыть страницу. Сигнал звучит, только пока сайт открыт на экране: если экран погас или открыто другое приложение, вы увидите, что время вышло, когда вернётесь. На iPhone в беззвучном режиме звука может не быть.</p>
+    </div>
+  </section>
+
   <!-- Документы -->
   <section class="view" id="v-docs">
     <h1>Документы</h1><p class="sub" id="docsSub">Файлы открываются целиком.</p>
@@ -549,6 +620,9 @@ html.big{zoom:1.15}
   </form>
 </div></div>
 
+<!-- сигнал таймера: виден в любом разделе -->
+<div class="alarm" id="alarm"><div class="wrap">⏰ Таймер: время вышло<button onclick="stopRing()">Выключить</button></div></div>
+
 <nav><div class="wrap">
   <button class="on" data-v="home" onclick="go('home')"><svg><use href="#i-home"/></svg>Главная</button>
   <button data-v="hours" onclick="go('hours')"><svg><use href="#i-clock"/></svg>Часы</button>
@@ -562,7 +636,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s || '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const ic = n => `<svg><use href="#i-${n}"/></svg>`;
 
-const NAV = {quiz: 'home', dates: 'home', train: 'home'};   // страницы без своей кнопки в нижнем меню
+const NAV = {quiz: 'home', dates: 'home', train: 'home', tools: 'home'};   // страницы без своей кнопки в нижнем меню
 function go(view, arg) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === (NAV[view] || view)));
@@ -577,6 +651,7 @@ function go(view, arg) {
   if (view === 'quiz') quizLoad();
   if (view === 'more') renderMore();
   if (view === 'train') trainRender();
+  if (view === 'tools') toolsMode(arg);
 }
 
 // ---- учёт часов
@@ -1007,6 +1082,235 @@ function shCalc() {
       <div><small>1 башмак</small><b>${empty ? '1 ось' : '3 оси'}</b></div></div></div>`;
 }
 
+// ---- инструменты: калькулятор, часы, таймер
+const TOOLS = {calc: ['Калькулятор', 'Сложение, вычитание, умножение, деление и проценты.'],
+  clock: ['Часы', 'Местное и московское время.'], timer: ['Таймер', 'Обратный отсчёт со звуковым сигналом.']};
+let TL = load('toolsMode', {m: 'calc'}).m;
+if (!TOOLS[TL]) TL = 'calc';
+function toolsMode(m) {
+  if (TOOLS[m]) { TL = m; save('toolsMode', {m}); }
+  Object.keys(TOOLS).forEach(k => { $('tl-' + k).classList.toggle('on', k === TL); $('t-' + k).style.display = k === TL ? '' : 'none'; });
+  $('toolsH').textContent = TOOLS[TL][0]; $('toolsSub').textContent = TOOLS[TL][1];
+  if (TL === 'calc') kcRender();
+  if (TL === 'timer') tmRender();
+  tick();
+}
+
+// калькулятор: выражение - строка из цифр, точки и + - * / %; считаю своим разбором, без eval
+const KC = load('calcPad', {e: '', h: []});
+let kcDone = false, kcErr = '', kcPrev = '';   // kcDone - на экране результат: цифра начинает новое выражение
+const kcNum = x => { x = +x.toPrecision(12); return Math.abs(x) >= 1e15 ? null : x.toFixed(10).replace(/\.?0+$/, '').replace(/^-0$/, '0'); };
+// 12345.5*-3 → «12 345,5 × −3»
+const kcShow = s => s.replace(/\d+(\.\d*)?|\.\d*/g, m => { const [a, b] = m.split('.'); return a.replace(/\B(?=(\d{3})+$)/g, ' ') + (b === undefined ? '' : ',' + b); })
+  .replace(/([\d,%])([-+*/])/g, '$1 $2 ').replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−');
+function kcEval(s) {   // «a + b %» - это a плюс b процентов от a, как на телефоне
+  let i = 0;
+  const num = () => { const m = /^\d*\.?\d*/.exec(s.slice(i))[0]; if (!m || m === '.') throw 0; i += m.length; return +m; };
+  const factor = base => {
+    if (s[i] === '-') { i++; return -factor(base); }
+    let v = num();
+    if (s[i] === '%') { i++; v = base === null ? v / 100 : base * v / 100; }
+    return v;
+  };
+  const term = base => {
+    let v = factor(base);
+    while (s[i] === '*' || s[i] === '/') {
+      const op = s[i++], r = factor(null);
+      if (op === '/' && !r) throw 'Деление на ноль';
+      v = op === '*' ? v * r : v / r;
+    }
+    return v;
+  };
+  let v = term(null);
+  while (s[i] === '+' || s[i] === '-') { const op = s[i++], r = term(v); v = op === '+' ? v + r : v - r; }
+  if (i < s.length) throw 0;
+  return v;
+}
+function kcCalc(e) {   // знак действия в конце не мешает: «5+» считается как «5»
+  const s = e.replace(/[-+*/]+$/, '');
+  if (!s) return null;
+  try { const r = kcNum(kcEval(s)); return r === null ? {err: 'Слишком большое число'} : {r}; }
+  catch (x) { return {err: typeof x === 'string' ? x : 'Ошибка в выражении'}; }
+}
+function kcKey(k) {
+  let e = kcDone && /[\d.]/.test(k) ? '' : KC.e;
+  const was = kcDone, last = e.slice(-1), cur = /\d*\.?\d*$/.exec(e)[0];
+  kcDone = false; kcErr = '';
+  if (k === 'C') e = '';
+  else if (k === 'back') e = was ? '' : e.slice(0, -1);
+  else if (e.length >= 80 && k !== '=') { kcDone = was; return; }
+  else if (/\d/.test(k)) { if (last !== '%') e = cur === '0' ? e.slice(0, -1) + k : e + k; }
+  else if (k === '.') { if (last !== '%' && !cur.includes('.')) e += cur ? '.' : '0.'; }
+  else if (k === '%') { if (cur && cur !== '.') e += '%'; }
+  else if ('+-*/'.includes(k)) {
+    const base = e.replace(/[-+*/]+$/, '');
+    if (base === e) e = e ? e + k : k === '-' ? '-' : '';
+    else if (k === '-' && /[*/]$/.test(e)) e += '-';
+    else e = base ? base + k : k === '-' ? '-' : '';
+  } else if (k === '±') {   // смена знака последнего числа
+    const n = /\d*\.?\d*%?$/.exec(e)[0];
+    let b = e.slice(0, e.length - n.length);
+    if (/-$/.test(b) && (b.length === 1 || /[-+*/]/.test(b.slice(-2, -1)))) b = b.slice(0, -1);
+    else if (/\+$/.test(b)) b = b.slice(0, -1) + '-';
+    else if (/-$/.test(b)) b = b.slice(0, -1) + '+';
+    else b += '-';
+    e = b + n;
+  } else if (k === '=') {
+    const r = kcCalc(e);
+    if (r && r.err) kcErr = r.err;
+    else if (r) {
+      if (r.r !== e) { KC.h.unshift({e, r: r.r}); KC.h.length = Math.min(KC.h.length, 20); }
+      kcPrev = e; e = r.r; kcDone = true;
+    }
+  }
+  KC.e = e; save('calcPad', KC); kcRender();
+}
+function kcUse(i) {   // результат из истории: после знака действия - дописать, иначе - начать с него
+  const r = KC.h[i].r;
+  KC.e = !kcDone && /[-+*/]$/.test(KC.e) ? KC.e + r : r;
+  kcDone = false; kcErr = ''; save('calcPad', KC); kcRender(); window.scrollTo(0, 0);
+}
+function kcClear() { KC.h = []; save('calcPad', KC); kcRender(); }
+function kcRender() {
+  const big = kcShow(KC.e) || '0', el = $('kcE');
+  el.textContent = big; el.style.fontSize = big.length > 18 ? '24px' : big.length > 12 ? '30px' : '';
+  const pre = !kcErr && !kcDone && /[-+*/%]/.test(KC.e.slice(1)) && kcCalc(KC.e);
+  $('kcR').textContent = kcErr || (kcDone ? kcShow(kcPrev) + ' =' : pre && pre.r !== undefined ? '= ' + kcShow(pre.r) : '');
+  $('kcR').classList.toggle('bad', !!kcErr);
+  $('kcHist').innerHTML = KC.h.length ? `<div class="card list">${KC.h.map((x, i) =>
+    `<button class="kv" onclick="kcUse(${i})"><span>${esc(kcShow(x.e))} =</span><b>${esc(kcShow(x.r))}</b></button>`).join('')}</div>`
+    : `<div class="card empty">Здесь появятся вычисления.</div>`;
+}
+const KC_KEYS = [['C', 'C', 'fn'], ['⌫', 'back', 'fn', 'Стереть'], ['%', '%', 'fn'], ['÷', '/', 'op', 'Разделить'], ['7'], ['8'], ['9'], ['×', '*', 'op', 'Умножить'],
+  ['4'], ['5'], ['6'], ['−', '-', 'op', 'Вычесть'], ['1'], ['2'], ['3'], ['+', '+', 'op', 'Сложить'], ['±', '±', 'fn', 'Сменить знак'], ['0'], [',', '.'], ['=', '=', 'eq']];
+$('kcKeys').innerHTML = KC_KEYS.map(([t, k = t, c = '', a]) => `<button class="${c}" onclick="kcKey('${k}')"${a ? ` aria-label="${a}"` : ''}>${t}</button>`).join('');
+document.addEventListener('keydown', ev => {
+  if (!$('v-tools').classList.contains('on') || TL !== 'calc' || ev.ctrlKey || ev.metaKey || ev.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+  const k = /^[\d+\-*/%]$/.test(ev.key) ? ev.key : {Enter: '=', '=': '=', Backspace: 'back', Escape: 'C', Delete: 'C', ',': '.', '.': '.'}[ev.key];
+  if (k) { ev.preventDefault(); kcKey(k); }
+});
+
+// часы: Москва - UTC+3 круглый год
+const MSK = 180, hms = d => `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+const mskDiff = off => { const d = off - MSK, a = Math.abs(d); return d ? `МСК${d > 0 ? '+' : '−'}${Math.floor(a / 60)}${a % 60 ? ':' + p2(a % 60) : ''}` : ''; };
+function clkTick(now) {
+  const off = -now.getTimezoneOffset(), msk = new Date(+now + (MSK - off) * 60000), diff = mskDiff(off);
+  $('clkDate').textContent = now.toLocaleDateString('ru-RU', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'});
+  $('clkTime').textContent = hms(now);
+  $('clkZone').textContent = diff ? `местное время · ${diff}` : 'местное время совпадает с московским';
+  $('clkMsk').textContent = hms(msk) + (msk.getDate() !== now.getDate() ? ` (${p2(msk.getDate())}.${p2(msk.getMonth() + 1)})` : '');
+  $('clkDiff').textContent = diff || 'нет';
+  $('clkUtc').textContent = hms(new Date(+now - off * 60000));
+}
+
+// таймер: идёт по времени окончания, поэтому не сбивается при переходе по разделам и перезагрузке страницы
+const TMR = load('timer', {h: '', m: '5', s: '', dur: 0, end: 0, left: 0, done: 0, wake: true});
+const tmInput = () => (int(TMR.h) * 3600 + int(TMR.m) * 60 + int(TMR.s)) * 1000;
+const tmState = () => TMR.end ? 'run' : TMR.done ? 'done' : TMR.dur ? 'pause' : 'idle';
+const tmLeft = () => ({run: Math.max(0, TMR.end - Date.now()), done: 0, pause: TMR.left})[tmState()] ?? tmInput();
+const tmFmt = ms => { const s = Math.ceil(ms / 1000), h = Math.floor(s / 3600); return (h ? h + ':' : '') + p2(Math.floor(s / 60) % 60) + ':' + p2(s % 60); };
+const tmAt = ts => { const d = new Date(ts); return `${p2(d.getHours())}:${p2(d.getMinutes())}` + (d.toDateString() !== new Date().toDateString() ? ` ${p2(d.getDate())}.${p2(d.getMonth() + 1)}` : ''); };
+const TM_PRE = [[60, '1 мин'], [180, '3 мин'], [300, '5 мин'], [600, '10 мин'], [900, '15 мин'], [1800, '30 мин'], [3600, '1 час']];
+$('tmPre').innerHTML = TM_PRE.map(([s, t]) => `<button class="chip" onclick="tmPreset(${s})">${t}</button>`).join('');
+function tmSet(key, value) { TMR[key] = value; save('timer', TMR); if (key === 'wake') { wakeSet(); tmRender(); } else { $('tmErr').textContent = ''; tmTick(); } }
+function tmStart() {
+  audioOn(); stopRing();
+  if (tmState() === 'pause') TMR.end = Date.now() + TMR.left;
+  else {
+    const d = tmInput();
+    if (!d) { $('tmErr').textContent = 'Укажите, на сколько поставить таймер.'; return; }
+    if (d > 99 * 3600e3) { $('tmErr').textContent = 'Таймер ставится не больше чем на 99 часов.'; return; }
+    Object.assign(TMR, {dur: d, end: Date.now() + d, done: 0});
+  }
+  save('timer', TMR); wakeSet(); tmRender();
+}
+function tmPause() { TMR.left = Math.max(0, TMR.end - Date.now()); TMR.end = 0; save('timer', TMR); wakeSet(); tmRender(); }
+function tmReset() { stopRing(); Object.assign(TMR, {dur: 0, end: 0, left: 0, done: 0}); save('timer', TMR); wakeSet(); tmRender(); }
+function tmAdd() { TMR.dur += 60000; if (TMR.end) TMR.end += 60000; else TMR.left += 60000; save('timer', TMR); tmTick(); }
+function tmPreset(sec) {
+  Object.assign(TMR, {h: String(Math.floor(sec / 3600) || ''), m: String(Math.floor(sec / 60) % 60), s: String(sec % 60 || ''), dur: 0, end: 0, left: 0, done: 0});
+  tmStart();
+}
+function tmRender() {
+  const st = tmState();
+  $('tmH').value = TMR.h; $('tmM').value = TMR.m; $('tmS').value = TMR.s;
+  $('tmSetBox').style.display = st === 'idle' || st === 'done' ? '' : 'none';
+  $('tmWakeBtn').style.display = 'wakeLock' in navigator ? '' : 'none';
+  $('tmWakeSw').classList.toggle('on', !!TMR.wake);
+  const b = (t, f, cls = 'btn2') => `<button class="${cls}" onclick="${f}()">${t}</button>`;
+  $('tmBtns').innerHTML = {idle: b('Старт', 'tmStart', 'btn'), run: b('Пауза', 'tmPause', 'btn') + b('+1 мин', 'tmAdd') + b('Сбросить', 'tmReset'),
+    pause: b('Продолжить', 'tmStart', 'btn') + b('+1 мин', 'tmAdd') + b('Сбросить', 'tmReset'),
+    done: (RING ? b('Выключить сигнал', 'stopRing', 'btn') : b('Запустить снова', 'tmStart', 'btn')) + b('Сбросить', 'tmReset')}[st];
+  tmTick();
+}
+function tmTick() {
+  const st = tmState(), left = tmLeft();
+  $('tmBig').textContent = tmFmt(left);
+  $('tmBar').style.width = (TMR.dur ? left / TMR.dur * 100 : 100) + '%';
+  $('tmState').textContent = {run: `сработает в ${tmAt(TMR.end)}`, pause: 'на паузе', done: `время вышло в ${tmAt(TMR.done)}`, idle: 'выберите время и нажмите «Старт»'}[st];
+}
+function tmTile() {
+  const st = tmState();
+  $('tileTimer').textContent = st === 'run' ? `идёт · ${tmFmt(tmLeft())}` : st === 'pause' ? `пауза · ${tmFmt(tmLeft())}` : st === 'done' ? 'время вышло' : 'обратный отсчёт';
+}
+
+// сигнал: звук играет сама страница, браузер разрешает его только после нажатия, поэтому звук включается кнопкой «Старт»
+let AC = null, RING = 0, WL = null;
+function audioOn() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} }
+function beep() {
+  if (!AC) return;
+  const t = AC.currentTime;
+  [0, .25, .5].forEach(d => {
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.frequency.value = 880; g.gain.setValueAtTime(.0001, t + d);
+    g.gain.exponentialRampToValueAtTime(.4, t + d + .02); g.gain.exponentialRampToValueAtTime(.0001, t + d + .18);
+    o.connect(g); g.connect(AC.destination); o.start(t + d); o.stop(t + d + .2);
+  });
+}
+function ring() {   // звенит минуту или до нажатия «Выключить»
+  let n = 0;
+  const f = () => { beep(); try { navigator.vibrate([300, 150, 300]); } catch (e) {} if (++n >= 50) stopRing(); };
+  clearInterval(RING); RING = setInterval(f, 1200); f();
+  $('alarm').classList.add('on');
+}
+function stopRing() {
+  const was = RING;
+  clearInterval(RING); RING = 0; $('alarm').classList.remove('on');
+  try { navigator.vibrate(0); } catch (e) {}
+  if (was && TL === 'timer') tmRender();
+}
+async function wakeSet() {   // экран не гаснет, пока идёт таймер (браузер сам отпускает блокировку, когда страница скрыта)
+  const want = !!(TMR.end && TMR.wake && !document.hidden);
+  try {
+    if (want && !WL && navigator.wakeLock) { WL = await navigator.wakeLock.request('screen'); WL.addEventListener('release', () => { WL = null; }); }
+    else if (!want && WL) { const w = WL; WL = null; await w.release(); }
+  } catch (e) { WL = null; }
+}
+
+// общий ход часов: раз в полсекунды, обновляется только то, что видно
+function tick() {
+  if (TMR.end && Date.now() >= TMR.end) {   // вышло давно (страница была закрыта) - без звука, только отметка
+    const late = Date.now() - TMR.end;
+    Object.assign(TMR, {done: TMR.end, end: 0, left: 0}); save('timer', TMR); wakeSet();
+    if (late < 60000) ring();
+    if (TL === 'timer') tmRender();
+  }
+  if (document.hidden) return;
+  const now = new Date(), tools = $('v-tools').classList.contains('on');
+  if (tools && TL === 'clock') clkTick(now);
+  if (tools && TL === 'timer') tmTick();
+  if ($('v-home').classList.contains('on')) {
+    const diff = mskDiff(-now.getTimezoneOffset()), msk = new Date(+now + (MSK + now.getTimezoneOffset()) * 60000);
+    $('tileClock').textContent = `${hms(now).slice(0, 5)} · ` + (diff ? `Москва ${hms(msk).slice(0, 5)}` : 'московское время');
+    tmTile();
+  }
+}
+function toolsInit() {
+  setInterval(tick, 500); tick();
+  document.addEventListener('visibilitychange', () => { wakeSet(); tick(); });
+  wakeSet();
+}
+
 // ---- сроки: медкомиссия, экзамены, допуски
 const DL = load('deadlines', {items: [], seq: 0});
 const daysLeft = s => Math.round((utc(s) - utc(iso(new Date()))) / 864e5);
@@ -1417,7 +1721,7 @@ function renderDocs() {
   // свёрнутые блоки помнят своё состояние
   const FOLD = load('folds', {marks: true});
   document.querySelectorAll('details.fold').forEach(d => { d.open = !!FOLD[d.dataset.fold]; d.addEventListener('toggle', () => { FOLD[d.dataset.fold] = d.open; save('folds', FOLD); }); });
-  loadHours(); vacRender(); trainRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore();
+  loadHours(); vacRender(); trainRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore(); toolsInit();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   try { META = await (await fetch('data/meta.json', {cache: 'no-cache'})).json(); }
   catch (e) { $('homeSub').textContent = 'Список документов не загрузился. Обновите страницу.'; return; }
