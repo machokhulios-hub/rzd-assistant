@@ -48,6 +48,13 @@ header{position:sticky;top:0;z-index:20;background:var(--glass);backdrop-filter:
 .brand{min-width:0;flex:0 1 auto;overflow:hidden}
 .gear{margin-left:auto;flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:22px;color:var(--muted);border:1px solid var(--line)}
 .gear.on{color:var(--red);border-color:rgba(255,82,82,.4)}
+/* учётная запись - только на своём хостинге со входом */
+.gear.acc{position:relative;color:var(--blue)}
+.gear[hidden]{display:none}
+#accBox{scroll-margin-top:76px}
+.gear.acc:not([hidden])+.gear{margin-left:8px}
+.gear.acc i{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--red);display:none}
+.gear.acc.new i{display:block}
 .brand small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:0}
 
 /* общие блоки */
@@ -363,6 +370,7 @@ html.big{zoom:1.15}
 <header><div class="wrap bar">
   <div class="logo"><svg><use href="#i-train"/></svg></div>
   <div class="brand">РЖД Ассистент<small>неофициальный справочник железнодорожника</small></div>
+  <button class="gear acc" id="accBtn" hidden onclick="accOpen()" aria-label="Учётная запись"><svg><use href="#i-user"/></svg><i></i></button>
   <button class="gear" id="gear" onclick="go('more')" aria-label="Настройки"><svg><use href="#i-gear"/></svg></button>
 </div></header>
 
@@ -2148,11 +2156,14 @@ async function accLoad() {
   if (!/(^|; )rzd_acc=/.test(document.cookie)) return;
   try { const r = await fetch('auth/me.php', {cache: 'no-store'}); if (r.ok) me = await r.json(); } catch (e) {}
   if (!me || !me.email) return;
-  $('accBox').style.display = '';
+  $('accBox').style.display = ''; $('accBtn').hidden = false;
+  $('accBtn').classList.toggle('new', !!me.pending);
+  $('accBtn').setAttribute('aria-label', `Учётная запись: ${me.email}` + (me.pending ? `, новых заявок: ${me.pending}` : ''));
   $('accName').textContent = me.name || me.email; $('accMail').textContent = me.name ? me.email : 'вы вошли на сайт';
   $('accAdmin').style.display = me.admin ? '' : 'none';
   if (me.pending) $('accPending').textContent = `новых заявок: ${me.pending}`;
 }
+function accOpen() { go('more'); $('accBox').scrollIntoView({block: 'start'}); }
 async function accLogout() {
   ask('Выйти с сайта на этом устройстве?', async () => {
     // скачанное для работы без сети убираем: без входа сайт не должен открываться
