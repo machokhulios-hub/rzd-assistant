@@ -292,13 +292,14 @@ html.big{zoom:1.15}
     <div>
       <h2>Разделы</h2>
       <div class="tiles">
-        <button class="card tile wide" style="--c:var(--green)" onclick="go('hours')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Учёт часов</b><small id="tileHours">поездки, отдых, итог за месяц</small></button>
+        <button class="card tile" style="--c:var(--green)" onclick="go('hours')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Учёт часов</b><small id="tileHours">поездки, отдых, итог за месяц</small></button>
         <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><b>Документы</b><small id="tileDocs">все файлы по разделам</small></button>
         <button class="card tile" style="--c:var(--cyan)" onclick="go('calc','rest')"><span class="badge"><svg><use href="#i-calc"/></svg></span><b>Бригадник</b><small>отдых и время подъёма</small></button>
         <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><b>ВУ-45</b><small>нажатие колодок</small></button>
         <button class="card tile" style="--c:var(--red)" onclick="go('calc','shoe')"><span class="badge"><svg><use href="#i-pin"/></svg></span><b>Башмаки</b><small>закрепление на перегоне</small></button>
         <button class="card tile" style="--c:var(--violet)" onclick="go('quiz')"><span class="badge"><svg><use href="#i-q"/></svg></span><b>Билеты</b><small id="tileQuiz">нестандартные ситуации</small></button>
         <button class="card tile" style="--c:var(--green)" onclick="go('dates')"><span class="badge"><svg><use href="#i-bell"/></svg></span><b>Сроки</b><small id="tileDates">медкомиссия, экзамены</small></button>
+        <button class="card tile" style="--c:var(--cyan)" onclick="go('train')"><span class="badge"><svg><use href="#i-train"/></svg></span><b>Электрички</b><small id="tileTrain">расписание</small></button>
       </div>
 
       <details class="fold" data-fold="vac">
@@ -470,6 +471,22 @@ html.big{zoom:1.15}
     <p class="note">Неофициальный справочник. Сверяйте с действующей редакцией документов и местными инструкциями.</p>
   </section>
 
+  <!-- Расписание электричек: открывается на Яндекс Расписаниях, свои маршруты запоминаются -->
+  <section class="view" id="v-train">
+    <h1>Электрички</h1><p class="sub">Расписание пригородных поездов между станциями.</p>
+    <form class="card form" onsubmit="event.preventDefault();trainGo()">
+      <label>Откуда<input class="inp" id="tFrom" autocomplete="off" placeholder="станция отправления"></label>
+      <button type="button" class="linkbtn" style="justify-self:start" onclick="trainSwap()">⇅ Поменять местами</button>
+      <label>Куда<input class="inp" id="tTo" autocomplete="off" placeholder="станция назначения"></label>
+      <div class="seg" style="margin:0"><button type="button" id="tw-0" onclick="trainDay(0)">Сегодня</button><button type="button" id="tw-1" onclick="trainDay(1)">Завтра</button></div>
+      <div class="err" id="tErr"></div>
+      <button class="btn">Показать расписание</button>
+    </form>
+    <h2 id="tRoutesH">Мои маршруты</h2>
+    <div class="card list" id="tRoutes"></div>
+    <p class="note">Расписание открывается на сайте Яндекс Расписаний в новой вкладке. Маршруты хранятся только в этом браузере.</p>
+  </section>
+
   <!-- Сроки -->
   <section class="view" id="v-dates">
     <h1>Сроки</h1><p class="sub">Медкомиссия, экзамены, допуски - сколько осталось до каждой даты.</p>
@@ -530,7 +547,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s || '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
 const ic = n => `<svg><use href="#i-${n}"/></svg>`;
 
-const NAV = {quiz: 'home', dates: 'home'};   // страницы без своей кнопки в нижнем меню
+const NAV = {quiz: 'home', dates: 'home', train: 'home'};   // страницы без своей кнопки в нижнем меню
 function go(view, arg) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-' + view));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === (NAV[view] || view)));
@@ -544,6 +561,7 @@ function go(view, arg) {
   if (view === 'dates') renderDates();
   if (view === 'quiz') quizLoad();
   if (view === 'more') renderMore();
+  if (view === 'train') trainRender();
 }
 
 // ---- учёт часов
@@ -965,6 +983,30 @@ function dateDel(id) {
   if (!confirm('Удалить срок?')) return;
   DL.items = DL.items.filter(x => x.id !== id); save('deadlines', DL); renderDates();
 }
+// ---- расписание электричек
+const TR = load('trains', {routes: [], day: 0});
+function trainDay(d) { TR.day = d; save('trains', TR); [0, 1].forEach(i => $('tw-' + i).classList.toggle('on', i === d)); }
+function trainSwap() { const a = $('tFrom').value; $('tFrom').value = $('tTo').value; $('tTo').value = a; }
+function trainOpen(from, to) {
+  window.open(`https://rasp.yandex.ru/search/suburban/?fromName=${encodeURIComponent(from)}&toName=${encodeURIComponent(to)}&when=${TR.day ? 'завтра' : 'сегодня'}`, '_blank', 'noopener');
+}
+function trainGo() {
+  const from = $('tFrom').value.trim(), to = $('tTo').value.trim();
+  $('tErr').textContent = from && to ? '' : 'Укажите обе станции.';
+  if (!from || !to) return;
+  TR.routes = [[from, to], ...TR.routes.filter(r => (r[0] + '|' + r[1]).toLowerCase() !== (from + '|' + to).toLowerCase())].slice(0, 6);
+  save('trains', TR); trainRender(); trainOpen(from, to);
+}
+function trainDrop(i) { TR.routes.splice(i, 1); save('trains', TR); trainRender(); }
+function trainRender() {
+  trainDay(TR.day || 0);
+  $('tRoutesH').style.display = $('tRoutes').style.display = TR.routes.length ? '' : 'none';
+  $('tRoutes').innerHTML = TR.routes.map(([a, b], i) => `<div class="item"><button style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;text-align:left" data-a="${esc(a)}" data-b="${esc(b)}" onclick="trainOpen(this.dataset.a,this.dataset.b)">
+    <span class="badge" style="--c:var(--cyan)">${ic('train')}</span><span style="min-width:0"><b>${esc(a)} → ${esc(b)}</b><small>открыть расписание</small></span></button>
+    <button class="xbtn" onclick="trainDrop(${i})" aria-label="Удалить маршрут">✕</button></div>`).join('');
+  $('tileTrain').textContent = TR.routes.length ? `${TR.routes[0][0]} → ${TR.routes[0][1]}` : 'расписание';
+}
+
 function renderDates() {
   const d = DL.items.slice().sort((a, b) => a.date < b.date ? -1 : 1), color = {late: 'red', soon: 'amber', ok: 'green'};
   $('dates').innerHTML = d.length ? `<div class="card list">` + d.map(x => { const n = daysLeft(x.date), c = dueCls(n); return `<div class="item">
@@ -1299,7 +1341,7 @@ function renderDocs() {
   // свёрнутые блоки помнят своё состояние
   const FOLD = load('folds', {marks: true});
   document.querySelectorAll('details.fold').forEach(d => { d.open = !!FOLD[d.dataset.fold]; d.addEventListener('toggle', () => { FOLD[d.dataset.fold] = d.open; save('folds', FOLD); }); });
-  loadHours(); vacRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore();
+  loadHours(); vacRender(); trainRender(); renderRecent(); renderMarks(); renderDates(); quizTile(); renderMore();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   try { META = await (await fetch('data/meta.json', {cache: 'no-cache'})).json(); }
   catch (e) { $('homeSub').textContent = 'Список документов не загрузился. Обновите страницу.'; return; }
