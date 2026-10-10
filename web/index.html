@@ -51,14 +51,21 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .send:disabled{opacity:.45}
 
 /* плитки */
-.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.tile{position:relative;text-align:left;padding:16px;min-height:128px;display:flex;flex-direction:column;overflow:hidden}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{position:relative;text-align:left;padding:10px 9px;border-radius:16px;display:grid;grid-template-columns:auto minmax(0,1fr);
+  grid-template-rows:auto 1fr;column-gap:9px;align-items:start;overflow:hidden}
 .tile:active{transform:scale(.98)}
 .badge{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:24px;color:var(--c);
   background:color-mix(in srgb,var(--c) 16%,transparent);border:1px solid color-mix(in srgb,var(--c) 42%,transparent)}
-.tile b{margin-top:auto;padding-top:14px;font-size:17px;font-weight:800;letter-spacing:-.01em}
-.tile small{color:var(--muted);font-size:12.5px;min-height:2.9em}
-.tile .dot{position:absolute;right:16px;top:18px;width:8px;height:8px;border-radius:50%;background:var(--c)}
+.tile .badge{grid-row:span 2;width:34px;height:34px;border-radius:11px;font-size:18px}
+.tile b{font-size:14px;font-weight:800;letter-spacing:-.01em;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile small{color:var(--muted);font-size:12px;line-height:1.3;min-height:2.6em;margin-top:2px;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+#v-home{padding-top:14px}
+#v-home h1{font-size:23px}
+#v-home .sub{margin:0;font-size:13px}
+#v-home h2{margin:14px 0 8px}
+#v-home .fold{margin-top:12px}
 .soon{position:absolute;right:12px;top:12px;font-size:11px;font-weight:700;padding:4px 8px;border-radius:999px;color:var(--muted);border:1px solid var(--line)}
 
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;padding:4px;background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px}
@@ -285,14 +292,14 @@ html.big{zoom:1.15}
 
       <h2>Разделы</h2>
       <div class="tiles">
-        <button class="card tile" style="--c:var(--green)" onclick="go('hours')"><span class="badge"><svg><use href="#i-clock"/></svg></span><i class="dot"></i><b>Учёт часов</b><small id="tileHours">поездки, отдых, итог за месяц</small></button>
-        <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><i class="dot"></i><b>Документы</b><small id="tileDocs">все файлы по разделам</small></button>
-        <button class="card tile" style="--c:var(--cyan)" onclick="go('calc','rest')"><span class="badge"><svg><use href="#i-calc"/></svg></span><i class="dot"></i><b>Бригадник</b><small>отдых в пункте оборота и время подъёма</small></button>
-        <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><i class="dot"></i><b>Справка ВУ-45</b><small>нажатие колодок и ручные тормоза</small></button>
-        <button class="card tile" style="--c:var(--red)" onclick="go('calc','shoe')"><span class="badge"><svg><use href="#i-pin"/></svg></span><i class="dot"></i><b>Башмаки</b><small>закрепление поезда на перегоне</small></button>
-        <button class="card tile" style="--c:var(--violet)" onclick="go('quiz')"><span class="badge"><svg><use href="#i-q"/></svg></span><i class="dot"></i><b>Билеты</b><small id="tileQuiz">нестандартные ситуации</small></button>
-        <button class="card tile" style="--c:var(--green)" onclick="go('dates')"><span class="badge"><svg><use href="#i-bell"/></svg></span><i class="dot"></i><b>Сроки</b><small id="tileDates">медкомиссия, экзамены, допуски</small></button>
-        <button class="card tile" style="--c:var(--blue)" onclick="go('more')"><span class="badge"><svg><use href="#i-more"/></svg></span><i class="dot"></i><b>Настройки</b><small>тема, шрифт, работа без сети</small></button>
+        <button class="card tile" style="--c:var(--green)" onclick="go('hours')"><span class="badge"><svg><use href="#i-clock"/></svg></span><b>Учёт часов</b><small id="tileHours">поездки, отдых, итог за месяц</small></button>
+        <button class="card tile" style="--c:var(--blue)" onclick="go('docs')"><span class="badge"><svg><use href="#i-doc"/></svg></span><b>Документы</b><small id="tileDocs">все файлы по разделам</small></button>
+        <button class="card tile" style="--c:var(--cyan)" onclick="go('calc','rest')"><span class="badge"><svg><use href="#i-calc"/></svg></span><b>Бригадник</b><small>отдых и время подъёма</small></button>
+        <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><b>ВУ-45</b><small>нажатие колодок</small></button>
+        <button class="card tile" style="--c:var(--red)" onclick="go('calc','shoe')"><span class="badge"><svg><use href="#i-pin"/></svg></span><b>Башмаки</b><small>закрепление на перегоне</small></button>
+        <button class="card tile" style="--c:var(--violet)" onclick="go('quiz')"><span class="badge"><svg><use href="#i-q"/></svg></span><b>Билеты</b><small id="tileQuiz">нестандартные ситуации</small></button>
+        <button class="card tile" style="--c:var(--green)" onclick="go('dates')"><span class="badge"><svg><use href="#i-bell"/></svg></span><b>Сроки</b><small id="tileDates">медкомиссия, экзамены</small></button>
+        <button class="card tile" style="--c:var(--blue)" onclick="go('more')"><span class="badge"><svg><use href="#i-more"/></svg></span><b>Настройки</b><small>тема, шрифт, без сети</small></button>
       </div>
 
       <details class="fold" data-fold="vac">
@@ -954,7 +961,7 @@ function renderDates() {
   $('dates').innerHTML = d.length ? `<div class="card list">` + d.map(x => { const n = daysLeft(x.date), c = dueCls(n); return `<div class="item">
     <span class="badge" style="--c:var(--${color[c]})">${ic('bell')}</span><span><b>${esc(x.name)}</b><small>до ${dmy(x.date)} · <span class="due ${c}">${dueText(n)}</span></small></span>
     <button class="xbtn" onclick="dateDel(${x.id})" aria-label="Удалить срок">✕</button></div>`; }).join('') + `</div>` : `<div class="card empty">Сроков пока нет.</div>`;
-  $('tileDates').textContent = d.length ? `${d[0].name}: ${dueText(daysLeft(d[0].date))}` : 'медкомиссия, экзамены, допуски';
+  $('tileDates').textContent = d.length ? `${d[0].name}: ${dueText(daysLeft(d[0].date))}` : 'медкомиссия, экзамены';
 }
 
 // ---- билеты: вопросы по нестандартным ситуациям, отметки «знаю»
@@ -1296,7 +1303,7 @@ function renderDocs() {
   STOP = new Set(META.stop);
   META.docs.forEach(d => d.stems = new Set(tokens(d.name)));
   const n = META.docs.length;
-  $('homeSub').textContent = n ? `${n} ${plural(n, 'документ', 'документа', 'документов')} в базе. Ищу слова во всех формах: «поезд» найдёт и «поезда», и «поездом».` : 'Документов пока нет.';
+  $('homeSub').textContent = n ? `${n} ${plural(n, 'документ', 'документа', 'документов')} в базе, слова ищу во всех формах` : 'Документов пока нет.';
   $('tileDocs').textContent = n ? `${n} ${plural(n, 'файл', 'файла', 'файлов')} по разделам` : 'пока пусто';
   renderMore();
   if (UI.offline && UI.offline !== META.v) offlineAll();   // сайт пересобран: обновляем скачанное для работы без сети
