@@ -293,6 +293,16 @@ button.kv span{min-width:0;overflow-wrap:anywhere}
 .clk small{display:block;color:var(--muted);font-size:13.5px}
 .clk small:first-child{color:var(--text);font-weight:700;font-size:15px}
 .form .three{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.seg.mini{margin-bottom:12px}
+.seg.mini button{padding:8px;font-size:13.5px}
+.laps{margin-top:12px}
+.laps:empty{display:none}
+.lap{display:grid;grid-template-columns:auto 1fr auto;gap:12px;padding:11px 16px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.lap:first-child{border-top:0}
+.lap span{color:var(--muted)}
+.lap b{text-align:right;font-weight:700}
+.lap small{color:var(--muted);align-self:center}
+.lap.best b{color:var(--green)}.lap.worst b{color:var(--red)}
 .btns{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px;margin-top:12px}
 .btn2{height:48px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-weight:800}
 .alarm{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom));z-index:31;display:none;padding:10px 0;background:var(--brand);color:#fff}
@@ -375,7 +385,7 @@ html.big{zoom:1.15}
         <button class="card tile" style="--c:var(--red)" onclick="go('calc','shoe')"><span class="badge"><svg><use href="#i-pin"/></svg></span><b>Башмаки</b><small>закрепление на перегоне</small></button>
         <button class="card tile" style="--c:var(--amber)" onclick="go('calc','vu')"><span class="badge"><svg><use href="#i-brake"/></svg></span><b>ВУ-45</b><small>нажатие колодок</small></button>
         <button class="card tile" style="--c:var(--blue)" onclick="go('tools','calc')"><span class="badge"><svg><use href="#i-math"/></svg></span><b>Калькулятор</b><small>проценты, история</small></button>
-        <button class="card tile" style="--c:var(--violet)" onclick="go('tools','timer')"><span class="badge"><svg><use href="#i-timer"/></svg></span><b>Таймер</b><small id="tileTimer">обратный отсчёт</small></button>
+        <button class="card tile" style="--c:var(--violet)" onclick="go('tools','timer')"><span class="badge"><svg><use href="#i-timer"/></svg></span><b>Таймер</b><small id="tileTimer">таймер и секундомер</small></button>
       </div>
 
     </div>
@@ -573,6 +583,14 @@ html.big{zoom:1.15}
     </div>
 
     <div id="t-timer">
+      <div class="seg mini"><button id="tw-timer" onclick="twMode(0)">Таймер</button><button id="tw-sw" onclick="twMode(1)">Секундомер</button></div>
+      <div id="tw-sw-box">
+        <div class="card sum" style="text-align:center"><div class="tbig" id="swBig">00:00,00</div><small style="color:var(--muted)" id="swState"></small></div>
+        <div class="btns" id="swBtns"></div>
+        <div class="card list laps" id="swLaps"></div>
+        <p class="note">Секундомер продолжает идти, если перейти в другой раздел или закрыть страницу.</p>
+      </div>
+      <div id="tw-timer-box">
       <div class="card sum" style="text-align:center"><div class="tbig" id="tmBig">05:00</div><small style="color:var(--muted)" id="tmState"></small>
         <div class="prog" style="margin-bottom:0"><i id="tmBar"></i></div></div>
       <div class="btns" id="tmBtns"></div>
@@ -584,9 +602,10 @@ html.big{zoom:1.15}
           <label>Секунды<input class="inp" id="tmS" inputmode="numeric" maxlength="3" placeholder="0" oninput="tmSet('s',this.value)"></label>
         </div>
         <div class="err" id="tmErr"></div>
-        <button type="button" class="tog" id="tmWakeBtn" onclick="tmSet('wake',!TMR.wake)"><span class="sw" id="tmWakeSw"></span>Не гасить экран, пока идёт таймер</button>
+        <button type="button" class="tog" id="tmWakeBtn" onclick="tmSet('wake',!TMR.wake)"><span class="sw" id="tmWakeSw"></span>Не гасить экран, пока идёт таймер или секундомер</button>
       </div>
       <p class="note">Таймер продолжает идти, если перейти в другой раздел или закрыть страницу. Сигнал звучит, только пока сайт открыт на экране: если экран погас или открыто другое приложение, вы увидите, что время вышло, когда вернётесь. На iPhone в беззвучном режиме звука может не быть.</p>
+      </div>
     </div>
   </section>
 
@@ -1167,9 +1186,10 @@ if (!TOOLS[TL]) TL = 'calc';
 function toolsMode(m) {
   if (TOOLS[m]) { TL = m; save('toolsMode', {m}); }
   Object.keys(TOOLS).forEach(k => { $('tl-' + k).classList.toggle('on', k === TL); $('t-' + k).style.display = k === TL ? '' : 'none'; });
-  $('toolsH').textContent = TOOLS[TL][0]; $('toolsSub').textContent = TOOLS[TL][1];
+  const [h, sub] = TL === 'timer' && SWT.on ? ['Секундомер', 'Время с точностью до сотых секунды и круги.'] : TOOLS[TL];
+  $('toolsH').textContent = h; $('toolsSub').textContent = sub;
   if (TL === 'calc') kcRender();
-  if (TL === 'timer') tmRender();
+  if (TL === 'timer') twRender();
   tick();
 }
 
@@ -1328,7 +1348,43 @@ function tmTick() {
 }
 function tmTile() {
   const st = tmState();
-  $('tileTimer').textContent = st === 'run' ? `идёт · ${tmFmt(tmLeft())}` : st === 'pause' ? `пауза · ${tmFmt(tmLeft())}` : st === 'done' ? 'время вышло' : 'обратный отсчёт';
+  const sw = swTime(), swt = swFmt(sw).replace(/,\d+$/, '');
+  $('tileTimer').textContent = st === 'run' ? `идёт · ${tmFmt(tmLeft())}` : st === 'pause' ? `пауза · ${tmFmt(tmLeft())}` : st === 'done' ? 'время вышло'
+    : SWT.start ? `секундомер · ${swt}` : sw ? `секундомер, пауза · ${swt}` : 'таймер и секундомер';
+}
+
+// секундомер: хранит момент запуска и набежавшее до паузы время, поэтому тоже идёт при переходах и перезагрузке
+const SWT = load('stopwatch', {on: 0, start: 0, acc: 0, laps: []});   // on - открыт секундомер, а не таймер; laps - общее время на каждом круге
+const swTime = () => SWT.acc + (SWT.start ? Date.now() - SWT.start : 0);
+const swFmt = ms => { const c = Math.floor(ms / 10), s = Math.floor(c / 100), h = Math.floor(s / 3600);
+  return (h ? h + ':' : '') + p2(Math.floor(s / 60) % 60) + ':' + p2(s % 60) + ',' + p2(c % 100); };
+let SWRAF = 0;
+function twMode(on) { SWT.on = on; save('stopwatch', SWT); toolsMode('timer'); }
+function twRender() {
+  $('tw-timer').classList.toggle('on', !SWT.on); $('tw-sw').classList.toggle('on', !!SWT.on);
+  $('tw-timer-box').style.display = SWT.on ? 'none' : ''; $('tw-sw-box').style.display = SWT.on ? '' : 'none';
+  if (SWT.on) swRender(); else tmRender();
+}
+function swSave() { save('stopwatch', SWT); wakeSet(); swRender(); }
+function swStart() { SWT.start = Date.now(); swSave(); }
+function swPause() { SWT.acc = swTime(); SWT.start = 0; swSave(); }
+function swReset() { Object.assign(SWT, {start: 0, acc: 0, laps: []}); swSave(); }
+function swLap() { SWT.laps.push(swTime()); if (SWT.laps.length > 99) SWT.laps.shift(); swSave(); }
+function swRender() {
+  const run = !!SWT.start, b = (t, f, cls = 'btn2') => `<button class="${cls}" onclick="${f}()">${t}</button>`;
+  $('swBtns').innerHTML = run ? b('Пауза', 'swPause', 'btn') + b('Круг', 'swLap')
+    : swTime() ? b('Продолжить', 'swStart', 'btn') + b('Сбросить', 'swReset') : b('Старт', 'swStart', 'btn');
+  const L = SWT.laps, d = L.map((t, i) => t - (L[i - 1] || 0)), many = d.length > 2;
+  const best = many ? Math.min(...d) : -1, worst = many ? Math.max(...d) : -1;
+  $('swLaps').innerHTML = d.map((x, i) => `<div class="lap ${x === best ? 'best' : x === worst ? 'worst' : ''}"><span>Круг ${i + 1}</span><small>${swFmt(L[i])}</small><b>${swFmt(x)}</b></div>`).reverse().join('');
+  swTick();
+  cancelAnimationFrame(SWRAF);
+  if (run) { const f = () => { if (!SWT.start || TL !== 'timer' || !SWT.on || !$('v-tools').classList.contains('on')) return; swTick(); SWRAF = requestAnimationFrame(f); }; SWRAF = requestAnimationFrame(f); }
+}
+function swTick() {
+  const t = swTime();
+  $('swBig').textContent = swFmt(t);
+  $('swState').textContent = SWT.start ? (SWT.laps.length ? `круг ${SWT.laps.length + 1} · ${swFmt(t - SWT.laps[SWT.laps.length - 1])}` : 'идёт') : t ? 'на паузе' : 'нажмите «Старт»';
 }
 
 // сигнал: звук играет сама страница, браузер разрешает его только после нажатия, поэтому звук включается кнопкой «Старт»
@@ -1356,8 +1412,8 @@ function stopRing() {
   try { navigator.vibrate(0); } catch (e) {}
   if (was && TL === 'timer') tmRender();
 }
-async function wakeSet() {   // экран не гаснет, пока идёт таймер (браузер сам отпускает блокировку, когда страница скрыта)
-  const want = !!(TMR.end && TMR.wake && !document.hidden);
+async function wakeSet() {   // экран не гаснет, пока идёт таймер или секундомер (браузер сам отпускает блокировку, когда страница скрыта)
+  const want = !!((TMR.end || SWT.start) && TMR.wake && !document.hidden);
   try {
     if (want && !WL && navigator.wakeLock) { WL = await navigator.wakeLock.request('screen'); WL.addEventListener('release', () => { WL = null; }); }
     else if (!want && WL) { const w = WL; WL = null; await w.release(); }
