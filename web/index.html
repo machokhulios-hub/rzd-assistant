@@ -2001,7 +2001,8 @@ async function find(text) {
       : 'Все слова вместе не встречаются - показаны фрагменты с частью слов') + (n > 200 ? ', показаны первые 200.' : '.');
   $('found').innerHTML = `<div class="count"><span>${head}${n && lost.length ? ` Нет в документах: ${lost.join(', ')}.` : ''}` +
     `${fixed.length ? ` Похоже на опечатку: ${fixed.join(', ')} - искал близкое слово.` : ''}</span><a onclick="find('')">сбросить</a></div>` + secChips +
-    (names.length ? `<div class="card list" style="margin-bottom:10px">${names.map(d => docItem(d, 'документ целиком')).join('')}</div>` : '') +
+    findExtra(text, stems) +
+    (names.length ? `<div class="card list" style="margin-bottom:10px">${names.map(d => docItem(d, ['документ целиком', docMeta(d)].filter(Boolean).join(' · '))).join('')}</div>` : '') +
     `<div id="hits"></div><button class="morebtn" id="moreBtn" style="display:none" onclick="showMore()">Показать ещё</button>`;
   showMore();
 }
@@ -2042,7 +2043,28 @@ function hitCard(id, row) {
   return `<div class="card hit"><div class="src">${ic('doc')}<span>${esc(doc.name)}</span>
     <button class="star ${BM.items.some(x => x.k === markKey(doc, row)) ? 'on' : ''}" onclick="toggleMark(${id},this)" aria-label="В закладки">${ic('star')}</button></div>
     <div class="tx ${cut ? 'cut' : ''}" ${cut ? `onclick="fullHit(this,${id})" title="Показать фрагмент целиком"` : ''}>${from ? '…' : ''}${marked(text, from, to)}${to < text.length ? '…' : ''}</div>
-    <div class="at"><span>${esc(label)}</span><a href="${fileUrl(doc, page && page[1])}" target="_blank" rel="noopener">${page ? 'Открыть страницу' : 'Открыть документ'}</a></div></div>`;
+    <div class="at"><span>${esc(label)}${docMeta(doc) ? ' · ' + esc(docMeta(doc)) : ''}</span><a href="${fileUrl(doc, page && page[1])}" target="_blank" rel="noopener">${page ? 'Открыть страницу' : 'Открыть документ'}</a></div></div>`;
+}
+// над результатами поиска: расчёты по теме запроса и нужные страницы документов
+const CALC_TOPIC = [
+  [/башмак|закреплен|уклон/, ['calc', 'shoe'], 'Башмаки', 'сколько тормозных башмаков для закрепления'],
+  [/ву-?45|нажати|колодк|тормозн\S* ос|ручн\S* тормоз/, ['calc', 'vu'], 'Справка ВУ-45', 'требуемое и фактическое нажатие колодок'],
+  [/бригадник|пункт\S* оборот|отдых/, ['calc', 'rest'], 'Бригадник', 'отдых в пункте оборота и время явки'],
+  [/рабоч\S* врем|переработ|сверхуроч|ночн\S* (врем|час)|непрерывн\S* работ/, ['hours'], 'Учёт часов', 'поездки, часы за месяц, отдых дома'],
+  [/отпуск/, ['vac'], 'Отпуск', 'дни отпуска, праздники и дата выхода'],
+  [/медкомисс|медицинск\S* (осмотр|комисс)|аттестац|проверк\S* знани|охран\S* труда|электробезопасн/, ['dates'], 'Сроки', 'когда истекает и когда проходить снова'],
+  [/нестандартн|билет/, ['quiz'], 'Билеты', 'вопросы с ответами из документов'],
+  [/московск\S* врем|местн\S* врем|часов\S* пояс/, ['tools', 'clock'], 'Часы', 'местное и московское время']];
+function findExtra(text, stems) {
+  const t = low(text), calc = CALC_TOPIC.filter(([re]) => re.test(t));
+  const pages = [];   // страницы из «Документов», где есть все слова запроса (или почти все - при длинном запросе)
+  DOC_USE.forEach(u => { const doc = META.docs.find(x => u.re.test(x.file)); if (doc) u.pages.forEach(([pg, title]) => {
+    const own = new Set(tokens(title)), hit = stems.filter(x => own.has(x)).length;
+    if (hit && hit >= Math.max(1, stems.length - (stems.length > 2 ? 1 : 0))) pages.push(`<a class="item dir" href="${fileUrl(doc, pg)}" target="_blank" rel="noopener"><span class="badge" style="--c:var(--cyan)">${ic('doc')}</span><span><b>${esc(title)}</b><small>${esc(u.title)}, стр. ${pg}</small></span><span class="go">${ic('chev')}</span></a>`);
+  }); });
+  return (calc.length ? `<div class="card list" style="margin-bottom:10px">${calc.map(([, to, name, sub]) =>
+      `<button class="item" onclick="go(${to.map(x => `'${x}'`).join(',')})"><span class="badge" style="--c:var(--amber)">${ic('calc')}</span><span><b>${name}</b><small>посчитать: ${sub}</small></span><span class="go">${ic('chev')}</span></button>`).join('')}</div>` : '') +
+    (pages.length ? `<div class="card list" style="margin-bottom:10px">${pages.join('')}</div>` : '');
 }
 function fullHit(el, id) { el.innerHTML = marked(ROWS[id][2], 0, ROWS[id][2].length); el.classList.remove('cut'); el.onclick = null; el.title = ''; }
 
