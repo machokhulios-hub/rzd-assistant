@@ -81,8 +81,7 @@ textarea::placeholder,input::placeholder{color:#5f6772}
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .tile.dir{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 1fr;padding:11px 12px 12px}
 .tile.dir .badge{grid-row:auto;margin-bottom:9px}
-.tile.dir .badge,.item.dir .badge{flex:none;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.item.dir .badge{font-size:16px}
+.item.dir .badge{flex:none}
 .item.dir b{white-space:normal}
 .vsw{display:flex;align-items:center;gap:4px;margin:0 0 10px}
 .vsw span{margin-right:auto;color:var(--muted);font-size:13px;font-weight:600}
@@ -1676,11 +1675,11 @@ async function find(text) {
   rows = (whole ? all : rows).sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1]);
   HITS = rows.slice(0, 200).map(r => r[0]); SHOWN = 0; MARKS = new Set(got.map(x => x.s));
   const names = META.docs.filter(d => (!SEC || d.sec === SEC) && stems.every(s => d.stems.has(s)));
-  const secs = [...new Set(META.docs.map(d => d.sec).filter(Boolean))];
+  const secs = dirSecs().filter(x => META.docs.some(d => d.sec === x));   // разделы с файлами, в порядке папок
   const secChips = secs.length > 1 ? `<div class="chips" style="margin-top:0;margin-bottom:10px">` + ['', ...secs].map(x =>
-    `<button class="chip ${x === SEC ? 'on' : ''}" data-s="${esc(x)}" onclick="setSec(this.dataset.s)">${esc(x || 'Все разделы')}</button>`).join('') + `</div>` : '';
+    `<button class="chip ${x === SEC ? 'on' : ''}" data-s="${esc(x)}" onclick="setSec(this.dataset.s)">${esc(x ? secName(x) : 'Все разделы')}</button>`).join('') + `</div>` : '';
   if (rows.length) remember(text);
-  const n = rows.length, head = !n ? (SEC ? `В разделе «${esc(SEC)}» ничего не найдено.` : 'В тексте документов таких слов нет.')
+  const n = rows.length, head = !n ? (SEC ? `В разделе «${esc(secName(SEC))}» ничего не найдено.` : 'В тексте документов таких слов нет.')
     : (whole ? `${n} ${plural(n, 'фрагмент', 'фрагмента', 'фрагментов')}` + (got.length > 1 ? (lost.length ? ' с остальными словами' : ' со всеми словами') : '')
       : 'Все слова вместе не встречаются - показаны фрагменты с частью слов') + (n > 200 ? ', показаны первые 200.' : '.');
   $('found').innerHTML = `<div class="count"><span>${head}${n && lost.length ? ` Нет в документах: ${lost.join(', ')}.` : ''}` +
@@ -1779,12 +1778,13 @@ if (vv) { vv.addEventListener('resize', dockPos); vv.addEventListener('scroll', 
 
 // ---- документы: папки плитками (папка в documents/ = раздел), внутри папки - список файлов
 const DIR_C = ['blue', 'cyan', 'green', 'amber', 'violet', 'red'];
+const secName = x => x.replace(/^\d+(?:\.\d+)*\.?\s+/, '');   // номер в начале названия папки задаёт только порядок, на сайте его не видно
 const dirSecs = () => !META ? [] : META.secs || [...new Set(META.docs.map(x => x.sec).filter(Boolean))];
 function renderDocs(sec) {
   const d = META ? META.docs : [], secs = dirSecs(), inDir = sec !== undefined && secs.includes(sec);
   const sub = x => !x.chunks ? 'без текста - поиск по этому файлу не работает' : /\.pdf$/i.test(x.file) ? `${x.parts} стр.` : x.file.split('.').pop().toUpperCase();
   const files = n => `${n} ${plural(n, 'файл', 'файла', 'файлов')}`;
-  $('docsH').textContent = inDir ? sec : 'Документы';
+  $('docsH').textContent = inDir ? secName(sec) : 'Документы';
   if (!META) { $('docsSub').textContent = 'Файлы открываются целиком.'; $('docs').innerHTML = '<div class="card empty">Список документов не загрузился. Обновите страницу.</div>'; return; }
   if (inDir) {
     const own = d.filter(x => x.sec === sec);
@@ -1796,8 +1796,8 @@ function renderDocs(sec) {
   $('docsSub').textContent = `${secs.length} ${plural(secs.length, 'папка', 'папки', 'папок')} · ${files(d.length)} · обновлено ${META.built}`;
   const loose = d.filter(x => !x.sec), tiles = UI.dirs === 'tiles';   // loose - файлы прямо в documents/, без папки
   const dirs = secs.map((x, i) => {
-    const m = /^(\d+(?:\.\d+)*)\.?\s+(.+)$/.exec(x), n = d.filter(y => y.sec === x).length;
-    const badge = `<span class="badge">${m ? esc(m[1]) : ic('folder')}</span>`, name = esc(m ? m[2] : x), note = n ? files(n) : 'пусто';
+    const n = d.filter(y => y.sec === x).length;
+    const badge = `<span class="badge">${ic('folder')}</span>`, name = esc(secName(x)), note = n ? files(n) : 'пусто';
     const at = `style="--c:var(--${DIR_C[i % DIR_C.length]})" data-s="${esc(x)}" onclick="go('docs',this.dataset.s)"`;
     return tiles ? `<button class="card tile dir" ${at}>${badge}<b>${name}</b><small>${note}</small></button>`
       : `<button class="item dir" ${at}>${badge}<span><b>${name}</b><small>${note}</small></span><span class="go">${ic('chev')}</span></button>`;
