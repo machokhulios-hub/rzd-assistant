@@ -133,7 +133,7 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .next{display:flex;gap:12px;align-items:center;padding:14px 16px;margin-top:12px}
 .next b{display:block;font-size:17px}
 .next small{color:var(--muted);font-size:12.5px}
-.form{padding:16px;display:grid;gap:12px}
+.form{padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .form label{display:grid;gap:6px;font-size:12.5px;font-weight:700;color:var(--muted)}
 .form input[type=datetime-local],.form input[type=time],.form input[type=date]{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;outline:0;
   color:var(--text);font-weight:600;color-scheme:dark;-webkit-appearance:none;min-height:46px}
@@ -163,9 +163,9 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 /* справка ВУ-45 */
 .form .inp{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:12px 14px;outline:0;
   color:var(--text);font-weight:600;min-height:46px;-webkit-appearance:none;appearance:none}
-.form select.inp{color-scheme:dark}
+.form select.inp{color-scheme:dark;max-width:100%;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
 .form .inp:focus{border-color:rgba(255,82,82,.6)}
-.vrow{display:grid;grid-template-columns:1fr 84px 78px;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) 84px 78px;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
 .vrow:first-child{border-top:0}
 .vrow.head{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--card2)}
 .vrow b{font-size:17px}
