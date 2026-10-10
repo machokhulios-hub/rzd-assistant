@@ -2,7 +2,6 @@
 Сервера у сайта нет: поиск считается в браузере по индексу, собранному здесь.
 Запуск:  python build.py   ->  папка public/ (её и публикуют)."""
 import hashlib
-import html
 import json
 import math
 import re
@@ -11,6 +10,7 @@ import time
 import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
+from urllib.parse import quote
 
 BASE = Path(__file__).parent
 SRC, WEB, OUT, CACHE = BASE / "documents", BASE / "web", BASE / "public", BASE / ".cache"
@@ -163,69 +163,6 @@ def _docx_parts(path: Path, per_part: int = 10) -> list[tuple[str, str]]:
     return parts
 
 
-# ---- страница для чтения: DOCX и TXT открываются на сайте, а не скачиваются
-VIEW_CSS = """:root{color-scheme:light;--bg:#fff;--text:#111;--muted:#666;--line:#ccc}   /* всегда белый лист, как в оригинале - и в тёмной теме */
-html{background:#fff}
-body{margin:0;background:var(--bg);color:var(--text);font:17px/1.55 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
-main{max-width:760px;margin:0 auto;padding:20px 16px 60px;overflow-wrap:anywhere}
-p{margin:0 0 .7em}.c{text-align:center}.r{text-align:right}h2{font-size:1.05em;line-height:1.35;margin:1.4em 0 .7em}
-.tbl{overflow-x:auto;margin:0 0 1em}table{border-collapse:collapse;font-size:.9em}td{border:1px solid var(--line);padding:6px 8px;vertical-align:top}"""
-
-
-def _view_html(title: str, body: str) -> str:
-    return (f'<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-            f'<title>{html.escape(title)}</title><style>{VIEW_CSS}</style></head><body><main>\n{body}\n</main></body></html>')
-
-
-def _runs_html(p) -> str:
-    out = []
-    for r in p.runs:
-        t = html.escape(r.text).replace("\n", "<br>").replace("\t", " ")
-        if t and r.bold:
-            t = f"<b>{t}</b>"
-        if t and r.italic:
-            t = f"<i>{t}</i>"
-        out.append(t)
-    return "".join(out) or html.escape(p.text)
-
-
-def view_docx(path: Path) -> str:
-    import docx
-    from docx.table import Table
-    from docx.text.paragraph import Paragraph
-    d, out = docx.Document(path), []
-    for el in d.element.body.iterchildren():
-        if el.tag.endswith("}p"):
-            p = Paragraph(el, d)
-            if not p.text.strip():
-                continue
-            al = str(p.alignment or p.style.paragraph_format.alignment or "")
-            cls = ' class="c"' if "CENTER" in al else ' class="r"' if "RIGHT" in al else ""
-            tag = "h2" if (p.style.name or "").lower().startswith(("heading", "заголовок", "title")) else "p"
-            out.append(f"<{tag}{cls}>{_runs_html(p)}</{tag}>")
-        elif el.tag.endswith("}tbl"):
-            rows = []
-            for r in Table(el, d).rows:
-                cells, seen = [], []
-                for c in r.cells:
-                    if c._tc in seen:          # объединённые ячейки python-docx отдаёт по нескольку раз
-                        continue
-                    seen.append(c._tc)
-                    cells.append("<td>" + "<br>".join(html.escape(x.text) for x in c.paragraphs if x.text.strip()) + "</td>")
-                rows.append("<tr>" + "".join(cells) + "</tr>")
-            out.append('<div class="tbl"><table>' + "".join(rows) + "</table></div>")
-    return "\n".join(out)
-
-
-def view_text(path: Path) -> str:
-    raw = path.read_bytes()
-    try:
-        text = raw.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        text = raw.decode("cp1251", errors="replace")
-    return "\n".join(f"<p>{html.escape(x)}</p>" for x in text.splitlines() if x.strip())
-
-
 def parts_of(path: Path) -> list:
     """Текст документа; разобранное хранится в .cache, чтобы не читать те же файлы при каждой сборке."""
     hit = CACHE / (hashlib.sha1(path.read_bytes()).hexdigest() + ".json")
@@ -267,6 +204,45 @@ def split_text(text: str) -> list[str]:
 
 
 # ---- сборка
+def make_view(path: Path, d: dict) -> bool:
+    """Документ для чтения на сайте (reader.py): files/<файл>.html и картинки в files/<файл>.img/.
+    Готовое хранится в .cache/view - пересобирается, только если поменялся файл или reader.py."""
+    import reader
+    key = hashlib.sha1(path.read_bytes() + Path(reader.__file__).read_bytes()).hexdigest()
+    cache, dst = CACHE / "view" / key, OUT / "files" / (d["file"] + ".html")
+    if not (cache / "body.html").exists():
+        ext, img = path.suffix.lower(), cache / "img"
+        side = SRC / "_text" / (path.stem + ".txt")
+        try:
+            if ext == ".docx":
+                body = reader.docx_html(path)
+            elif ext in (".txt", ".md"):
+                body = reader.txt_html(path)
+            elif side.exists() and not reader.pdf_has_text(path):    # скан: текст, набранный вручную
+                body = reader.sidecar_html(side.read_text("utf-8"))
+            elif d["chunks"]:
+                body = reader.pdf_html(path, img, path.name + ".img")
+            else:
+                body = ""                               # скан без текста - только оригинал
+        except ImportError:                             # нет pymupdf - PDF открывается как есть
+            print(f"  {path.name}: для чтения PDF на сайте нужен pymupdf (pip install -r requirements.txt)")
+            return False
+        except Exception as e:
+            print(f"  НЕ СОБРАН ДЛЯ ЧТЕНИЯ: {path.name}: {e}")
+            body = ""
+        cache.mkdir(parents=True, exist_ok=True)
+        (cache / "body.html").write_text(body, "utf-8")
+    body = (cache / "body.html").read_text("utf-8")
+    if not body.strip():
+        return False
+    if (cache / "img").exists():
+        shutil.copytree(cache / "img", OUT / "files" / (d["file"] + ".img"))
+    up = "../" * (d["file"].count("/") + 1)
+    orig = f"{up}pdf.html?f={quote('files/' + d['file'], safe='')}" if path.suffix.lower() == ".pdf" else ""
+    dst.write_text(reader.page_html(d["name"], body, orig), "utf-8")
+    return True
+
+
 def dump(path: Path, obj):
     path.write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), "utf-8")
 
@@ -329,15 +305,9 @@ def build():
             shutil.copytree(f, OUT / f.name)
     for path, d in zip(files, docs):
         (OUT / "files" / d["file"]).parent.mkdir(parents=True, exist_ok=True)
-        if path.suffix.lower() == ".pdf":    # PDF браузер показывает сам
+        if path.suffix.lower() == ".pdf":    # сам PDF - для кнопки «Оригинал» и если текст достать не удалось
             shutil.copyfile(path, OUT / "files" / d["file"])
-            continue
-        try:                                 # остальное - страницей для чтения, сам файл на сайт не кладём
-            body = view_docx(path) if path.suffix.lower() == ".docx" else view_text(path)
-        except Exception as e:
-            print(f"НЕ ПОКАЗАТЬ: {path.name}: {e}")
-            body = "<p>Документ не удалось показать.</p>"
-        (OUT / "files" / (d["file"] + ".html")).write_text(_view_html(d["name"], body), "utf-8")
+        d["view"] = make_view(path, d)
     groups = defaultdict(dict)
     for t, v in post.items():
         groups[fnv(t) % shards][t] = v

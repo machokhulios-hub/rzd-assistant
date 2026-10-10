@@ -2133,7 +2133,7 @@ async function offlineAll() {   // прогоняем все файлы чере
   const urls = [];
   for (let k = 0; k < META.shards; k++) urls.push(`data/i/${k}.json?v=${META.v}`);
   for (let k = 0; k * META.per < META.chunks; k++) urls.push(`data/t/${k}.json?v=${META.v}`);
-  urls.push(`data/vocab.json?v=${META.v}`, 'tickets.json', 'pdf.html', 'pdfjs/pdf.min.mjs', 'pdfjs/pdf.worker.min.mjs', ...META.docs.map(d => /\.pdf$/i.test(d.file) ? rawUrl(d) : fileUrl(d)));
+  urls.push(`data/vocab.json?v=${META.v}`, 'tickets.json', 'pdf.html', 'pdfjs/pdf.min.mjs', 'pdfjs/pdf.worker.min.mjs', ...META.docs.map(d => fileUrl(d).replace(/#.*/, '')), ...META.docs.filter(d => /\.pdf$/i.test(d.file)).map(rawUrl));
   let done = 0, bad = 0;
   for (const u of urls) {
     try { const r = await fetch(u); if (r.ok) await r.arrayBuffer(); else bad++; } catch (e) { bad++; }
@@ -2297,8 +2297,9 @@ async function near(s) {   // опечатка: самое частое из п�
 const plural = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? b : c;
 // документы открываются на сайте, а не скачиваются: PDF - в просмотрщике pdf.html, DOCX и TXT - страницей для чтения
 const rawUrl = doc => `files/${doc.file.split('/').map(encodeURIComponent).join('/')}`;
-const fileUrl = (doc, page) => /\.pdf$/i.test(doc.file) ? `pdf.html?f=${encodeURIComponent('files/' + doc.file)}` + (page ? `#page=${page}` : '')
-  : `${rawUrl(doc)}.html?v=${META ? META.v : ''}`;
+// view - есть страница для чтения единого вида (reader.py); иначе PDF как есть
+const fileUrl = (doc, page) => doc.view ? `${rawUrl(doc)}.html?v=${META ? META.v : ''}` + (page ? `#page=${page}` : '')
+  : `pdf.html?f=${encodeURIComponent('files/' + doc.file)}` + (page ? `#page=${page}` : '');
 const docItem = (x, sub) => `<a class="item" href="${fileUrl(x)}" target="_blank" rel="noopener"><span class="badge" style="--c:var(--cyan)">${ic('doc')}</span>
   <span><b>${esc(x.name)}</b><small>${esc(sub)}</small></span><span class="go">${ic('chev')}</span></a>`;
 
