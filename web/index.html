@@ -80,7 +80,14 @@ textarea::placeholder,input::placeholder{color:#5f6772}
 .tile small{color:var(--muted);font-size:12px;line-height:1.3;min-height:2.6em;margin-top:2px;
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .tile.dir{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto 1fr;padding:11px 12px 12px}
-.tile.dir .badge{grid-row:auto;margin-bottom:9px;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tile.dir .badge{grid-row:auto;margin-bottom:9px}
+.tile.dir .badge,.item.dir .badge{flex:none;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.item.dir .badge{font-size:16px}
+.item.dir b{white-space:normal}
+.vsw{display:flex;align-items:center;gap:4px;margin:0 0 10px}
+.vsw span{margin-right:auto;color:var(--muted);font-size:13px;font-weight:600}
+.vsw button{width:38px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:19px;color:var(--muted);border:1px solid transparent}
+.vsw button.on{color:var(--text);background:var(--card2);border-color:var(--line)}
 .tile.dir b{white-space:normal;overflow-wrap:anywhere;hyphens:auto;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3}
 .tile.dir small{min-height:0}
 .back{display:inline-flex;align-items:center;gap:4px;margin:0 0 10px -4px;font-weight:700;font-size:13.5px;color:var(--muted)}
@@ -315,6 +322,8 @@ html.big{zoom:1.15}
   <symbol id="i-snow" viewBox="0 0 24 24"><path d="M7 14.5a4 4 0 0 1-.5-7.97A6 6 0 0 1 18 7.5a3.5 3.5 0 0 1-.5 7zM8 18.5h.01M12 18.5h.01M16 18.5h.01M10 21.5h.01M14 21.5h.01"/></symbol>
   <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 2.5H6.5A1.5 1.5 0 0 0 5 4v16a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 20V7.5zM14 2.5v5h5M8.5 13h7M8.5 17h5"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2 2.5h8.4A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol>
+  <symbol id="i-rows" viewBox="0 0 24 24"><path d="M8.5 6h12M8.5 12h12M8.5 18h12M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2"/></symbol>
   <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11 12 3.5l8.5 7.5V20a1.5 1.5 0 0 1-1.5 1.5h-4.5v-6h-5v6H5A1.5 1.5 0 0 1 3.5 20z"/></symbol>
   <symbol id="i-news" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M7.5 9h5M7.5 12.5h9M7.5 16h9"/></symbol>
@@ -1453,7 +1462,7 @@ function quizTile() { const n = Object.keys(QZ.done).length; $('tileQuiz').textC
 
 // ---- настройки: светлая тема, крупный шрифт, работа без сети
 // offline - сборка сайта, скачанная для работы без сети; manual - тему выбрали сами (иначе в Telegram она как в Telegram)
-const UI = load('ui', {light: false, big: false, offline: '', manual: false});
+const UI = load('ui', {light: false, big: false, offline: '', manual: false, dirs: 'list'});   // dirs - папки документов: list - списком, tiles - плиткой
 function uiApply() {
   if (TG && !UI.manual) UI.light = TG.colorScheme === 'light';
   const bg = UI.light ? '#f4f5f7' : '#0d0f13';
@@ -1785,15 +1794,22 @@ function renderDocs(sec) {
     return;
   }
   $('docsSub').textContent = `${secs.length} ${plural(secs.length, 'папка', 'папки', 'папок')} · ${files(d.length)} · обновлено ${META.built}`;
-  const loose = d.filter(x => !x.sec);   // файлы прямо в documents/, без папки
-  $('docs').innerHTML = (secs.length ? `<div class="tiles">${secs.map((x, i) => {
+  const loose = d.filter(x => !x.sec), tiles = UI.dirs === 'tiles';   // loose - файлы прямо в documents/, без папки
+  const dirs = secs.map((x, i) => {
     const m = /^(\d+(?:\.\d+)*)\.?\s+(.+)$/.exec(x), n = d.filter(y => y.sec === x).length;
-    return `<button class="card tile dir" style="--c:var(--${DIR_C[i % DIR_C.length]})" data-s="${esc(x)}" onclick="go('docs',this.dataset.s)">` +
-      `<span class="badge">${m ? esc(m[1]) : ic('folder')}</span><b>${esc(m ? m[2] : x)}</b><small>${n ? files(n) : 'пусто'}</small></button>`;
-  }).join('')}</div>` : '') +
+    const badge = `<span class="badge">${m ? esc(m[1]) : ic('folder')}</span>`, name = esc(m ? m[2] : x), note = n ? files(n) : 'пусто';
+    const at = `style="--c:var(--${DIR_C[i % DIR_C.length]})" data-s="${esc(x)}" onclick="go('docs',this.dataset.s)"`;
+    return tiles ? `<button class="card tile dir" ${at}>${badge}<b>${name}</b><small>${note}</small></button>`
+      : `<button class="item dir" ${at}>${badge}<span><b>${name}</b><small>${note}</small></span><span class="go">${ic('chev')}</span></button>`;
+  }).join('');
+  $('docs').innerHTML = (secs.length ? `<div class="vsw"><span>Папки</span>` +
+      `<button class="${tiles ? '' : 'on'}" onclick="dirsView('list')" aria-label="Списком">${ic('rows')}</button>` +
+      `<button class="${tiles ? 'on' : ''}" onclick="dirsView('tiles')" aria-label="Плиткой">${ic('grid')}</button></div>` +
+      (tiles ? `<div class="tiles">${dirs}</div>` : `<div class="card list">${dirs}</div>`) : '') +
     (loose.length ? `<h2>Без раздела</h2><div class="card list">${loose.map(x => docItem(x, sub(x))).join('')}</div>` : '') +
     (!secs.length && !loose.length ? '<div class="card empty">Документов пока нет.</div>' : '');
 }
+function dirsView(v) { UI.dirs = v; save('ui', UI); renderDocs(); }
 function dirBack() { if (BACK[BACK.length - 1] === 'docs') BACK.pop(); go('docs', undefined, true); }
 
 // ---- Telegram Mini App: кнопка «Назад», тема Telegram, ссылки в браузере, свои диалоги, данные в облаке Telegram
