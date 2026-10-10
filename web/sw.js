@@ -5,11 +5,12 @@ self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.o
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
 // страница и список документов - сначала из сети (чтобы видеть обновления), без сети - из памяти
-async function netFirst(url) {
+async function netFirst(url, nav) {
   const c = await caches.open(CACHE);
   try {
-    const r = await fetch(plain(url), {cache: 'no-cache'});
-    if (r.ok) c.put(plain(url), r.clone());
+    // на хостинге со входом страница может ответить переходом на вход - его браузер выполняет сам, в память не кладём
+    const r = await fetch(plain(url), {cache: 'no-cache', redirect: nav ? 'manual' : 'follow'});
+    if (r.ok && !r.redirected) c.put(plain(url), r.clone());
     return r;
   } catch (e) {
     const hit = await c.match(plain(url));
@@ -27,9 +28,9 @@ async function cacheFirst(req) {
 }
 self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
-  if (req.method !== 'GET' || url.origin !== location.origin) return;
+  if (req.method !== 'GET' || url.origin !== location.origin || url.pathname.includes('/auth/')) return;   // вход и регистрация - только из сети
   const fresh = req.mode === 'navigate' || /\/$|\/(index\.html|meta\.json|tickets\.json|sw\.js)$/.test(url.pathname);
-  e.respondWith(fresh ? netFirst(url) : cacheFirst(req));
+  e.respondWith(fresh ? netFirst(url, req.mode === 'navigate') : cacheFirst(req));
 });
 // после пересборки сайта страница просит убрать индекс прошлой сборки
 self.addEventListener('message', e => {

@@ -1,0 +1,27 @@
+# Сайт открывается только после входа: все запросы к файлам сайта проходят через gate.php.
+Options -Indexes
+DirectoryIndex index.html
+AddDefaultCharset utf-8
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # настройки и код входа
+  RewriteRule ^_srv(/|$) - [F,L]
+  # страницы входа, регистрации и значки для них - без входа
+  RewriteRule ^gate\.php$ - [L]
+  RewriteRule ^auth/[a-z]+\.php$ - [L]
+  RewriteRule ^(manifest\.webmanifest|icon-[0-9]+\.png)$ - [L]
+  # всё остальное - только после входа
+  RewriteRule ^ gate.php [L]
+</IfModule>
+<IfModule !mod_rewrite.c>
+  # без mod_rewrite доступ не закрыть - сайт не открываем вовсе
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+</IfModule>
+
+# сжатие текстовых файлов, которые отдаёт gate.php
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json application/manifest+json image/svg+xml
+</IfModule>

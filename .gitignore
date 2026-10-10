@@ -2,3 +2,7 @@ public/
 .cache/
 __pycache__/
 .DS_Store
+hosting/
+rzd-hosting.zip
+server/_srv/config.php
+server/_srv/.schema1
